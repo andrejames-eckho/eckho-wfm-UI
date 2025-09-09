@@ -4,7 +4,7 @@ import Header from './components/Header'
 import DatePicker from './components/DatePicker'
 import EmployeeTable from './components/EmployeeTable'
 import EmployeeDetails from './components/EmployeeDetails'
-import { dummyEmployees, formatDate } from './utils/data'
+import { dummyEmployees, dummyFieldEmployees, formatDate } from './utils/data'
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -74,7 +74,16 @@ function App() {
 
         <DatePicker selectedDate={selectedDate} onChange={handleDateChange} label={formatDate(selectedDate)} />
 
-        <EmployeeTable employees={dummyEmployees} onRowClick={handleEmployeeClick} />
+        <div className="space-y-10">
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Field</h3>
+            <EmployeeTable employees={dummyFieldEmployees} onRowClick={handleEmployeeClick} />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Warehouse</h3>
+            <EmployeeTable employees={dummyEmployees} onRowClick={handleEmployeeClick} />
+          </div>
+        </div>
       </div>
     </div>
   )

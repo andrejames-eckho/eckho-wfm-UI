@@ -84,4 +84,58 @@ export const formatDate = (date) => {
   })
 }
 
+// Additional dataset for Field employees
+export const dummyFieldEmployees = [
+  {
+    id: 101,
+    firstName: 'Ava',
+    lastName: 'Martinez',
+    timeIn: '07:45 AM',
+    timeOut: '04:15 PM',
+    breakIn: '12:10 PM',
+    breakOut: '12:50 PM',
+    status: 'On Duty'
+  },
+  {
+    id: 102,
+    firstName: 'Noah',
+    lastName: 'Clark',
+    timeIn: '09:10 AM',
+    timeOut: '05:40 PM',
+    breakIn: '01:00 PM',
+    breakOut: null,
+    status: 'On Break'
+  },
+  {
+    id: 103,
+    firstName: 'Mia',
+    lastName: 'Lee',
+    timeIn: '06:55 AM',
+    timeOut: '03:30 PM',
+    breakIn: '11:30 AM',
+    breakOut: '12:10 PM',
+    status: 'Undertime'
+  },
+  {
+    id: 104,
+    firstName: 'Ethan',
+    lastName: 'Hernandez',
+    timeIn: '10:05 AM',
+    timeOut: '07:20 PM',
+    breakIn: '02:15 PM',
+    breakOut: '02:55 PM',
+    status: 'Overtime'
+  },
+  {
+    id: 105,
+    firstName: 'Isabella',
+    lastName: 'Walker',
+    timeIn: '09:40 AM',
+    timeOut: '05:00 PM',
+    breakIn: '12:45 PM',
+    breakOut: '01:25 PM',
+    status: 'Late'
+  }
+]
+
 
