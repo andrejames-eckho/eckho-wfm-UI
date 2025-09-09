@@ -2,6 +2,7 @@ import React from 'react'
 import { getEmployeeStatus, statusColors } from '../utils/data'
 
 export default function EmployeeTable({ employees, onRowClick }) {
+  const showExpectedColumn = employees.some((e) => !!e.expectedStartTime)
   return (
     <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
       <div className="overflow-x-auto">
@@ -10,6 +11,9 @@ export default function EmployeeTable({ employees, onRowClick }) {
             <tr className="border-b border-gray-700">
               <th className="py-3 px-4 text-gray-300">First Name</th>
               <th className="py-3 px-4 text-gray-300">Last Name</th>
+              {showExpectedColumn && (
+                <th className="py-3 px-4 text-gray-300">Expected Time In</th>
+              )}
               <th className="py-3 px-4 text-gray-300">Time In</th>
               <th className="py-3 px-4 text-gray-300">Time Out</th>
               <th className="py-3 px-4 text-gray-300">Break In</th>
@@ -27,7 +31,10 @@ export default function EmployeeTable({ employees, onRowClick }) {
                 <td className="py-3 px-4">{employee.firstName}</td>
                 <td className="py-3 px-4">{employee.lastName}</td>
                 <td className="py-3 px-4">{employee.timeIn}</td>
-                <td className="py-3 px-4">{employee.timeOut}</td>
+                {showExpectedColumn && (
+                  <td className="py-3 px-4">{employee.expectedStartTime || '-'}</td>
+                )}
+                <td className="py-3 px-4">{employee.timeOut || 'Still on Duty'}</td>
                 <td className="py-3 px-4">{employee.breakIn}</td>
                 <td className="py-3 px-4">{employee.breakOut || 'In Progress'}</td>
                 <td className="py-3 px-4">
