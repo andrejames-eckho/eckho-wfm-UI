@@ -126,7 +126,7 @@ function App() {
           <div className="flex items-center space-x-4">
             <button
               onClick={handleBackToTable}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-white rounded-md transition-colors"
             >
               Back to Table
             </button>
