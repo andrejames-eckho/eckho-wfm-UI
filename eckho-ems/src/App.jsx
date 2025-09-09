@@ -116,7 +116,7 @@ function App() {
 
   if (selectedEmployee) {
     return (
-      <div className="min-h-screen bg-eckho-dark text-white">
+      <div className="min-h-screen bg-gray-950 text-white">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white">
           <div className="flex items-center space-x-3">
@@ -158,28 +158,39 @@ function App() {
             Time Records for {selectedEmployee.firstName} {selectedEmployee.lastName}
           </h2>
           
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
             <h3 className="text-lg font-semibold mb-4">Recent Time Records</h3>
-            <div className="space-y-4">
-              {Array.from({ length: 7 }, (_, i) => {
-                const date = new Date()
-                date.setDate(date.getDate() - i)
-                return (
-                  <div key={i} className="flex justify-between items-center p-4 bg-gray-700 rounded-md">
-                    <div>
-                      <span className="font-medium">{formatDate(date)}</span>
-                    </div>
-                    <div className="flex space-x-6">
-                      <span>In: {selectedEmployee.timeIn}</span>
-                      <span>Out: {selectedEmployee.timeOut}</span>
-                      <span>Break: {selectedEmployee.breakIn} - {selectedEmployee.breakOut || 'In Progress'}</span>
-                      <span className={`px-3 py-1 rounded-full text-sm text-white ${statusColors[getEmployeeStatus(selectedEmployee)]}`}>
-                        {getEmployeeStatus(selectedEmployee)}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-gray-100">
+                <thead>
+                  <tr className="border-b border-gray-700">
+                    <th className="py-3 px-4 text-gray-300">Date</th>
+                    <th className="py-3 px-4 text-gray-300">Time In</th>
+                    <th className="py-3 px-4 text-gray-300">Time Out</th>
+                    <th className="py-3 px-4 text-gray-300">Break</th>
+                    <th className="py-3 px-4 text-gray-300">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 7 }, (_, i) => {
+                    const date = new Date()
+                    date.setDate(date.getDate() - i)
+                    return (
+                      <tr key={i} className="border-b border-gray-800 hover:bg-gray-800">
+                        <td className="py-3 px-4">{formatDate(date)}</td>
+                        <td className="py-3 px-4">{selectedEmployee.timeIn}</td>
+                        <td className="py-3 px-4">{selectedEmployee.timeOut}</td>
+                        <td className="py-3 px-4">{selectedEmployee.breakIn} - {selectedEmployee.breakOut || 'In Progress'}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-3 py-1 rounded-full text-sm text-white ${statusColors[getEmployeeStatus(selectedEmployee)]}`}>
+                            {getEmployeeStatus(selectedEmployee)}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -188,7 +199,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-eckho-dark text-white">
+    <div className="min-h-screen bg-gray-950 text-white">
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-white">
         <div className="flex items-center space-x-3">
@@ -238,18 +249,18 @@ function App() {
         </div>
 
         {/* Employee Table */}
-        <div className="bg-eckho-light rounded-lg p-6">
+        <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
           <div className="overflow-x-auto">
-            <table className="w-full text-gray-800">
+            <table className="w-full text-left text-gray-100">
               <thead>
-                <tr className="border-b-2 border-gray-400">
-                  <th className="text-left py-3 px-4 font-semibold">First Name</th>
-                  <th className="text-left py-3 px-4 font-semibold">Last Name</th>
-                  <th className="text-left py-3 px-4 font-semibold">Time In</th>
-                  <th className="text-left py-3 px-4 font-semibold">Time Out</th>
-                  <th className="text-left py-3 px-4 font-semibold">Break In</th>
-                  <th className="text-left py-3 px-4 font-semibold">Break Out</th>
-                  <th className="text-left py-3 px-4 font-semibold">Status</th>
+                <tr className="border-b border-gray-700">
+                  <th className="py-3 px-4 text-gray-300">First Name</th>
+                  <th className="py-3 px-4 text-gray-300">Last Name</th>
+                  <th className="py-3 px-4 text-gray-300">Time In</th>
+                  <th className="py-3 px-4 text-gray-300">Time Out</th>
+                  <th className="py-3 px-4 text-gray-300">Break In</th>
+                  <th className="py-3 px-4 text-gray-300">Break Out</th>
+                  <th className="py-3 px-4 text-gray-300">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -257,7 +268,7 @@ function App() {
                   <tr
                     key={employee.id}
                     onClick={() => handleEmployeeClick(employee)}
-                    className="border-b border-gray-300 hover:bg-gray-200 cursor-pointer transition-colors"
+                    className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer transition-colors"
                   >
                     <td className="py-3 px-4">{employee.firstName}</td>
                     <td className="py-3 px-4">{employee.lastName}</td>
