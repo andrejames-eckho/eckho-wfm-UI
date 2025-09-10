@@ -1,4 +1,5 @@
 // Dummy employee data
+// Possible backend code
 export const dummyEmployees = [
   {
     id: 1,
@@ -68,7 +69,8 @@ export const statusColors = {
   'Overtime': 'bg-blue-500',
   'Late': 'bg-red-500',
   'Undertime': 'bg-yellow-500',
-  'On Time': 'bg-teal-500'
+  'On Time': 'bg-teal-500',
+  'No Record': 'bg-gray-600'
 }
 
 // Time helpers and rules for automatic status classification
@@ -152,6 +154,58 @@ export const formatDate = (date) => {
   })
 }
 
+// Generate time records for the past 3 months
+const generateTimeRecords = (employee, monthsBack = 3) => {
+  const records = []
+  const today = new Date()
+  
+  for (let monthOffset = 0; monthOffset < monthsBack; monthOffset++) {
+    const currentMonth = new Date(today.getFullYear(), today.getMonth() - monthOffset, 1)
+    const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate()
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const recordDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+      
+      // Skip future dates
+      if (recordDate > today) continue
+      
+      // Skip weekends (optional - you can remove this if employees work weekends)
+      if (recordDate.getDay() === 0 || recordDate.getDay() === 6) continue
+      
+      // Generate random but realistic time data
+      const timeInHour = 7 + Math.floor(Math.random() * 3) // 7-9 AM
+      const timeInMinute = Math.floor(Math.random() * 60)
+      const timeIn = new Date(recordDate)
+      timeIn.setHours(timeInHour, timeInMinute, 0, 0)
+      
+      const workHours = 7.5 + Math.random() * 2 // 7.5-9.5 hours
+      const timeOut = new Date(timeIn.getTime() + workHours * 60 * 60 * 1000)
+      
+      const breakStart = new Date(timeIn.getTime() + 4 * 60 * 60 * 1000) // 4 hours after start
+      const breakEnd = new Date(breakStart.getTime() + 30 * 60 * 1000) // 30 min break
+      
+      records.push({
+        id: `${employee.id}-${recordDate.getTime()}`,
+        employeeId: employee.id,
+        date: new Date(recordDate),
+        timeIn: timeIn.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        timeOut: timeOut.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        breakIn: breakStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        breakOut: breakEnd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        status: getEmployeeStatus({
+          ...employee,
+          timeIn: timeIn.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+          timeOut: timeOut.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+          breakIn: breakStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+          breakOut: breakEnd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+        })
+      })
+    }
+  }
+  
+  return records.sort((a, b) => b.date - a.date) // Sort by date descending (newest first)
+}
+
 // Additional dataset for Field employees
 export const dummyFieldEmployees = [
   {
@@ -210,5 +264,110 @@ export const dummyFieldEmployees = [
     status: 'Late'
   }
 ]
+
+// Generate time records for all employees
+export const generateEmployeeTimeRecords = (employee) => {
+  return generateTimeRecords(employee, 3) // 3 months of data
+}
+
+// Helper function to filter time records by date range
+export const filterTimeRecordsByDateRange = (records, startDate, endDate) => {
+  return records.filter(record => {
+    const recordDate = new Date(record.date)
+    return recordDate >= startDate && recordDate <= endDate
+  })
+}
+
+// Helper function to group time records by week
+export const groupTimeRecordsByWeek = (records) => {
+  const grouped = {}
+  
+  records.forEach(record => {
+    const date = new Date(record.date)
+    const weekStart = new Date(date)
+    weekStart.setDate(date.getDate() - date.getDay()) // Start of week (Sunday)
+    weekStart.setHours(0, 0, 0, 0)
+    
+    const weekKey = weekStart.toISOString().split('T')[0]
+    
+    if (!grouped[weekKey]) {
+      grouped[weekKey] = {
+        weekStart,
+        records: []
+      }
+    }
+    
+    grouped[weekKey].records.push(record)
+  })
+  
+  return Object.values(grouped).sort((a, b) => b.weekStart - a.weekStart)
+}
+
+// Helper function to group time records by month
+export const groupTimeRecordsByMonth = (records) => {
+  const grouped = {}
+  
+  records.forEach(record => {
+    const date = new Date(record.date)
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    
+    if (!grouped[monthKey]) {
+      grouped[monthKey] = {
+        month: date.getMonth(),
+        year: date.getFullYear(),
+        records: []
+      }
+    }
+    
+    grouped[monthKey].records.push(record)
+  })
+  
+  return Object.values(grouped).sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year
+    return b.month - a.month
+  })
+}
+
+// Helper function to get employee time record for a specific date
+export const getEmployeeTimeRecordForDate = (employee, targetDate) => {
+  const allRecords = generateEmployeeTimeRecords(employee)
+  const targetDateStr = targetDate.toDateString()
+  
+  return allRecords.find(record => {
+    const recordDateStr = new Date(record.date).toDateString()
+    return recordDateStr === targetDateStr
+  })
+}
+
+// Helper function to get all employees with their time records for a specific date
+export const getEmployeesWithTimeRecordsForDate = (employees, targetDate) => {
+  return employees.map(employee => {
+    const timeRecord = getEmployeeTimeRecordForDate(employee, targetDate)
+    
+    if (timeRecord) {
+      // Return employee with time record data for the selected date
+      return {
+        ...employee,
+        timeIn: timeRecord.timeIn,
+        timeOut: timeRecord.timeOut,
+        breakIn: timeRecord.breakIn,
+        breakOut: timeRecord.breakOut,
+        status: timeRecord.status,
+        hasRecordForDate: true
+      }
+    } else {
+      // Return employee without time record for the selected date
+      return {
+        ...employee,
+        timeIn: '-',
+        timeOut: '-',
+        breakIn: '-',
+        breakOut: '-',
+        status: 'No Record',
+        hasRecordForDate: false
+      }
+    }
+  })
+}
 
 

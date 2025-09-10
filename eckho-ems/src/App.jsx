@@ -1,15 +1,29 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Helmet } from 'react-helmet-async'
 import Header from './components/Header'
 import DatePicker from './components/DatePicker'
 import EmployeeTable from './components/EmployeeTable'
 import EmployeeDetails from './components/EmployeeDetails'
-import { dummyEmployees, dummyFieldEmployees, formatDate } from './utils/data'
+import { 
+  dummyEmployees, 
+  dummyFieldEmployees, 
+  formatDate, 
+  getEmployeesWithTimeRecordsForDate 
+} from './utils/data'
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState(null)
+
+  // Get employees with time records for the selected date
+  const fieldEmployeesWithRecords = useMemo(() => {
+    return getEmployeesWithTimeRecordsForDate(dummyFieldEmployees, selectedDate)
+  }, [selectedDate])
+
+  const warehouseEmployeesWithRecords = useMemo(() => {
+    return getEmployeesWithTimeRecordsForDate(dummyEmployees, selectedDate)
+  }, [selectedDate])
 
   const handleDateChange = (date) => {
     setSelectedDate(date)
@@ -74,14 +88,39 @@ function App() {
 
         <DatePicker selectedDate={selectedDate} onChange={handleDateChange} label={formatDate(selectedDate)} />
 
+        {/* Summary Section */}
+        <div className="bg-gray-900 rounded-lg p-4 mb-6 border border-gray-800">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-blue-400">
+                {fieldEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length}
+              </div>
+              <div className="text-sm text-gray-400">Field Employees with Records</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-400">
+                {warehouseEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length}
+              </div>
+              <div className="text-sm text-gray-400">Warehouse Employees with Records</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-purple-400">
+                {fieldEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length + 
+                 warehouseEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length}
+              </div>
+              <div className="text-sm text-gray-400">Total with Records</div>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-10">
           <div>
             <h3 className="text-xl font-semibold mb-4">Field</h3>
-            <EmployeeTable employees={dummyFieldEmployees} onRowClick={handleEmployeeClick} />
+            <EmployeeTable employees={fieldEmployeesWithRecords} onRowClick={handleEmployeeClick} />
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-4">Warehouse</h3>
-            <EmployeeTable employees={dummyEmployees} onRowClick={handleEmployeeClick} />
+            <EmployeeTable employees={warehouseEmployeesWithRecords} onRowClick={handleEmployeeClick} />
           </div>
         </div>
       </div>
