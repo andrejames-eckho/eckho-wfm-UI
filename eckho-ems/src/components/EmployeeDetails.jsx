@@ -174,6 +174,7 @@ export default function EmployeeDetails({ employee }) {
                     <thead>
                       <tr className="border-b border-gray-700">
                         <th className="py-3 px-4 text-gray-300">Date</th>
+                        <th className="py-3 px-4 text-gray-300">Expected Time In</th>
                         <th className="py-3 px-4 text-gray-300">Time In</th>
                         <th className="py-3 px-4 text-gray-300">Time Out</th>
                         <th className="py-3 px-4 text-gray-300">Break</th>
@@ -184,6 +185,7 @@ export default function EmployeeDetails({ employee }) {
                       {group.records.map((record) => (
                         <tr key={record.id} className="border-b border-gray-800 hover:bg-gray-800">
                           <td className="py-3 px-4">{formatDate(record.date)}</td>
+                          <td className="py-3 px-4 text-gray-400">{record.expectedTimeIn}</td>
                           <td className="py-3 px-4">{record.timeIn}</td>
                           <td className="py-3 px-4">{record.timeOut}</td>
                           <td className="py-3 px-4">{record.breakIn} - {record.breakOut}</td>

@@ -119,29 +119,55 @@ export const getEmployeeStatus = (employee) => {
     return employee.status
   }
 
-  // Compute net worked minutes
-  const breakDuration = diffMinutesWrapMidnight(breakInMin, breakOutMin)
-  const grossDuration = diffMinutesWrapMidnight(timeInMin, timeOutMin)
-  const netWorked = Math.max(0, grossDuration - breakDuration)
-
   // Allow custom expected start time per employee (e.g., field employees)
   const expectedStartMin = parseTimeToMinutes(employee.expectedStartTime || EXPECTED_START_TIME)
-  // end time isn't used directly; we rely on net worked minutes with grace
+  
+  // For warehouse employees, use expected start/end times (8am-5pm) for status calculation
+  if (!employee.expectedStartTime) {
+    // Warehouse employees - use 8am-5pm schedule
+    const expectedEndMin = parseTimeToMinutes('05:00 PM')
+    
+    if (expectedStartMin !== null && expectedEndMin !== null) {
+      // Check if late (time in after 8:15am)
+      const isLateBeyondGrace = timeInMin > (expectedStartMin + GRACE_MINUTES)
+      
+      // Check if left early (time out before 4:45pm)
+      const isEarlyDeparture = timeOutMin < (expectedEndMin - GRACE_MINUTES)
+      
+      // Check if worked overtime (time out after 5:15pm)
+      const isOvertime = timeOutMin > (expectedEndMin + GRACE_MINUTES)
+      
+      if (isLateBeyondGrace) return 'Late'
+      if (isEarlyDeparture) return 'Undertime'
+      if (isOvertime) return 'Overtime'
+      return 'On Time'
+    }
+  } else {
+    // Field employees - calculate based on actual time worked
+    const breakDuration = diffMinutesWrapMidnight(breakInMin, breakOutMin)
+    const grossDuration = diffMinutesWrapMidnight(timeInMin, timeOutMin)
+    const netWorked = Math.max(0, grossDuration - breakDuration)
+    
+    // Calculate expected work time for field employees
+    let expectedWorkMinutes = EXPECTED_WORK_MINUTES // Default 8 hours
+    
+    // Classification with grace:
+    // - On Time if time in is <= expected start + 15 minutes (early is always On Time)
+    // - On Time if net worked within ±15 minutes of expected work time
+    // - Late only if time in exceeds expected start by more than 15 minutes
+    // - Overtime if net worked > expected + 15 minutes
+    // - Undertime if net worked < expected - 15 minutes
 
-  // Classification with grace:
-  // - On Time if time in is <= expected start + 15 minutes (early is always On Time)
-  // - On Time if net worked within ±15 minutes of expected 8h
-  // - Late only if time in exceeds expected start by more than 15 minutes
-  // - Overtime if net worked > expected + 15 minutes
-  // - Undertime if net worked < expected - 15 minutes
+    const isLateBeyondGrace = expectedStartMin !== null && timeInMin > (expectedStartMin + GRACE_MINUTES)
+    const withinWorkGrace = Math.abs(netWorked - expectedWorkMinutes) <= GRACE_MINUTES
 
-  const isLateBeyondGrace = expectedStartMin !== null && timeInMin > (expectedStartMin + GRACE_MINUTES)
-  const withinWorkGrace = Math.abs(netWorked - EXPECTED_WORK_MINUTES) <= GRACE_MINUTES
+    if (!isLateBeyondGrace && withinWorkGrace) return 'On Time'
+    if (isLateBeyondGrace) return 'Late'
+    if (netWorked > expectedWorkMinutes + GRACE_MINUTES) return 'Overtime'
+    if (netWorked < expectedWorkMinutes - GRACE_MINUTES) return 'Undertime'
+    return 'On Time'
+  }
 
-  if (!isLateBeyondGrace && withinWorkGrace) return 'On Time'
-  if (isLateBeyondGrace) return 'Late'
-  if (netWorked > EXPECTED_WORK_MINUTES + GRACE_MINUTES) return 'Overtime'
-  if (netWorked < EXPECTED_WORK_MINUTES - GRACE_MINUTES) return 'Undertime'
   return 'On Time'
 }
 
@@ -172,13 +198,51 @@ const generateTimeRecords = (employee, monthsBack = 3) => {
       // Skip weekends (optional - you can remove this if employees work weekends)
       if (recordDate.getDay() === 0 || recordDate.getDay() === 6) continue
       
-      // Generate random but realistic time data
-      const timeInHour = 7 + Math.floor(Math.random() * 3) // 7-9 AM
-      const timeInMinute = Math.floor(Math.random() * 60)
-      const timeIn = new Date(recordDate)
-      timeIn.setHours(timeInHour, timeInMinute, 0, 0)
+      // Generate random but realistic time data based on employee's expected start time
+      const expectedStartTime = employee.expectedStartTime || '08:00 AM'
+      const expectedTimeInMin = parseTimeToMinutes(expectedStartTime)
       
-      const workHours = 7.5 + Math.random() * 2 // 7.5-9.5 hours
+      let timeIn
+      if (expectedTimeInMin !== null) {
+        // Generate time within ±2 hours of expected start time
+        const varianceMinutes = Math.floor(Math.random() * 240) - 120 // -2 to +2 hours
+        const actualTimeInMin = expectedTimeInMin + varianceMinutes
+        
+        // Handle day rollover for night shifts
+        const actualTimeInMinNormalized = actualTimeInMin < 0 ? actualTimeInMin + 24 * 60 : actualTimeInMin
+        const actualHour = Math.floor(actualTimeInMinNormalized / 60) % 24
+        const actualMinute = actualTimeInMinNormalized % 60
+        
+        timeIn = new Date(recordDate)
+        timeIn.setHours(actualHour, actualMinute, 0, 0)
+      } else {
+        // Fallback to random time if expected start time is invalid
+        const timeInHour = 7 + Math.floor(Math.random() * 3) // 7-9 AM
+        const timeInMinute = Math.floor(Math.random() * 60)
+        timeIn = new Date(recordDate)
+        timeIn.setHours(timeInHour, timeInMinute, 0, 0)
+      }
+      
+      // Calculate work hours based on employee type
+      let workHours
+      if (employee.expectedStartTime) {
+        // Field employees - variable work hours
+        workHours = 7.5 + Math.random() * 2 // 7.5-9.5 hours
+      } else {
+        // Warehouse employees - work until 5 PM
+        const expectedEndTime = parseTimeToMinutes('05:00 PM')
+        const timeInMinutes = parseTimeToMinutes(timeIn.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }))
+        
+        if (expectedEndTime !== null && timeInMinutes !== null) {
+          // Calculate hours from time in to 5 PM, with some variance
+          const baseWorkMinutes = expectedEndTime - timeInMinutes
+          const varianceMinutes = Math.floor(Math.random() * 60) - 30 // ±30 minutes variance
+          workHours = Math.max(4, (baseWorkMinutes + varianceMinutes) / 60) // Minimum 4 hours
+        } else {
+          workHours = 7.5 + Math.random() * 2 // Fallback
+        }
+      }
+      
       const timeOut = new Date(timeIn.getTime() + workHours * 60 * 60 * 1000)
       
       const breakStart = new Date(timeIn.getTime() + 4 * 60 * 60 * 1000) // 4 hours after start
@@ -188,6 +252,8 @@ const generateTimeRecords = (employee, monthsBack = 3) => {
         id: `${employee.id}-${recordDate.getTime()}`,
         employeeId: employee.id,
         date: new Date(recordDate),
+        expectedTimeIn: employee.expectedStartTime || '08:00 AM',
+        expectedTimeOut: employee.expectedStartTime ? null : '05:00 PM', // Only warehouse employees have expected end time
         timeIn: timeIn.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
         timeOut: timeOut.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
         breakIn: breakStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
@@ -348,6 +414,8 @@ export const getEmployeesWithTimeRecordsForDate = (employees, targetDate) => {
       // Return employee with time record data for the selected date
       return {
         ...employee,
+        expectedTimeIn: timeRecord.expectedTimeIn,
+        expectedTimeOut: timeRecord.expectedTimeOut,
         timeIn: timeRecord.timeIn,
         timeOut: timeRecord.timeOut,
         breakIn: timeRecord.breakIn,
@@ -359,6 +427,8 @@ export const getEmployeesWithTimeRecordsForDate = (employees, targetDate) => {
       // Return employee without time record for the selected date
       return {
         ...employee,
+        expectedTimeIn: employee.expectedStartTime || '08:00 AM',
+        expectedTimeOut: employee.expectedStartTime ? null : '05:00 PM',
         timeIn: '-',
         timeOut: '-',
         breakIn: '-',
