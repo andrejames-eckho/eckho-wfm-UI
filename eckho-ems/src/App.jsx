@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
 import Header from './components/Header'
 import Login from './components/Login'
 import DatePicker from './components/DatePicker'
@@ -15,11 +16,41 @@ import {
 } from './utils/data'
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  const navigate = useNavigate()
+  const location = useLocation()
+  
+  // Initialize authentication state from localStorage
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('eckho_authenticated') === 'true'
+  })
+  
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const savedDate = localStorage.getItem('eckho_selected_date')
+    return savedDate ? new Date(savedDate) : new Date()
+  })
+  
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState(null)
   const [showRegistration, setShowRegistration] = useState(false)
+
+  // Save authentication state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('eckho_authenticated', isAuthenticated.toString())
+  }, [isAuthenticated])
+
+  // Save selected date to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('eckho_selected_date', selectedDate.toISOString())
+  }, [selectedDate])
+
+  // Handle authentication state changes
+  useEffect(() => {
+    if (!isAuthenticated && location.pathname !== '/login') {
+      navigate('/login')
+    } else if (isAuthenticated && location.pathname === '/login') {
+      navigate('/')
+    }
+  }, [isAuthenticated, location.pathname, navigate])
 
   // Get employees with time records for the selected date
   const fieldEmployeesWithRecords = useMemo(() => {
@@ -33,6 +64,7 @@ function App() {
   const handleLogin = (username, password) => {
     if (username === adminCredentials.username && password === adminCredentials.password) {
       setIsAuthenticated(true)
+      navigate('/')
     } else {
       alert('Invalid username or password')
     }
@@ -42,87 +74,40 @@ function App() {
     setSelectedDate(date)
   }
 
-  const handleEmployeeClick = (employee) => {
-    setSelectedEmployee(employee)
-  }
 
   const handleSignOut = () => {
     setIsAuthenticated(false)
     setShowUserDropdown(false)
     setSelectedEmployee(null)
     setShowRegistration(false)
+    localStorage.removeItem('eckho_authenticated')
+    localStorage.removeItem('eckho_selected_date')
+    navigate('/login')
   }
 
   const handleBackToTable = () => {
     setSelectedEmployee(null)
+    navigate('/')
   }
 
   const handleShowRegistration = () => {
-    setShowRegistration(true)
+    navigate('/register')
   }
 
   const handleBackToDashboard = () => {
-    setShowRegistration(false)
+    navigate('/')
   }
 
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />
+  const handleEmployeeClick = (employee) => {
+    setSelectedEmployee(employee)
+    navigate(`/employee/${employee.id}`)
   }
 
-  if (showRegistration) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white">
-        <Helmet>
-          <title>ECKHO EMS - Employee Registration</title>
-          <meta name="description" content="Register new employee" />
-        </Helmet>
-        <Header
-          showUserDropdown={showUserDropdown}
-          onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
-          onSignOut={handleSignOut}
-          rightSlot={(
-            <button
-              onClick={handleBackToDashboard}
-              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-white rounded-md transition-colors"
-            >
-              Back to Dashboard
-            </button>
-          )}
-        />
-        <EmployeeRegistration />
-      </div>
-    )
-  }
-
-  if (selectedEmployee) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white">
-        <Helmet>
-          <title>{`ECKHO EMS - ${selectedEmployee.firstName} ${selectedEmployee.lastName}`}</title>
-          <meta name="description" content="Employee time records details" />
-        </Helmet>
-        <Header
-          showUserDropdown={showUserDropdown}
-          onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
-          onSignOut={handleSignOut}
-          rightSlot={(
-            <button
-              onClick={handleBackToTable}
-              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-white rounded-md transition-colors"
-            >
-              Back to Table
-            </button>
-          )}
-        />
-        <EmployeeDetails employee={selectedEmployee} />
-      </div>
-    )
-  }
-
-  return (
+  // Component for Dashboard
+  const Dashboard = () => (
     <div className="min-h-screen bg-gray-950 text-white">
       <Helmet>
-        <title>ECKHO EMS - Dashboard</title>
+        <title>ECKHO WFM - Dashboard</title>
         <meta name="description" content="Employee management dashboard" />
       </Helmet>
       <Header
@@ -185,6 +170,76 @@ function App() {
         </div>
       </div>
     </div>
+  )
+
+  // Component for Employee Details
+  const EmployeeDetailsPage = () => {
+    const { id } = useParams()
+    const employeeId = parseInt(id, 10)
+    const allEmployees = [...dummyFieldEmployees, ...dummyEmployees]
+    const employee = allEmployees.find(emp => emp.id === employeeId)
+    
+    if (!employee || isNaN(employeeId)) {
+      navigate('/')
+      return null
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-950 text-white">
+        <Helmet>
+          <title>{`ECKHO WFM - ${employee.firstName} ${employee.lastName}`}</title>
+          <meta name="description" content="Employee time records details" />
+        </Helmet>
+        <Header
+          showUserDropdown={showUserDropdown}
+          onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
+          onSignOut={handleSignOut}
+          rightSlot={(
+            <button
+              onClick={handleBackToTable}
+              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-white rounded-md transition-colors"
+            >
+              Back to Table
+            </button>
+          )}
+        />
+        <EmployeeDetails employee={employee} />
+      </div>
+    )
+  }
+
+  // Component for Registration
+  const RegistrationPage = () => (
+    <div className="min-h-screen bg-gray-950 text-white">
+      <Helmet>
+        <title>ECKHO WFM - Employee Registration</title>
+        <meta name="description" content="Register new employee" />
+      </Helmet>
+      <Header
+        showUserDropdown={showUserDropdown}
+        onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
+        onSignOut={handleSignOut}
+        rightSlot={(
+          <button
+            onClick={handleBackToDashboard}
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-white rounded-md transition-colors"
+          >
+            Back to Dashboard
+          </button>
+        )}
+      />
+      <EmployeeRegistration />
+    </div>
+  )
+
+  return (
+    <Routes>
+      <Route path="/login" element={<Login onLogin={handleLogin} />} />
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/register" element={<RegistrationPage />} />
+      <Route path="/employee/:id" element={<EmployeeDetailsPage />} />
+      <Route path="*" element={<Dashboard />} />
+    </Routes>
   )
 }
 
