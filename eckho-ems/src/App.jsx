@@ -4,6 +4,7 @@ import Header from './components/Header'
 import DatePicker from './components/DatePicker'
 import EmployeeTable from './components/EmployeeTable'
 import EmployeeDetails from './components/EmployeeDetails'
+import EmployeeRegistration from './components/EmployeeRegistration'
 import { 
   dummyEmployees, 
   dummyFieldEmployees, 
@@ -15,6 +16,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState(null)
+  const [showRegistration, setShowRegistration] = useState(false)
 
   // Get employees with time records for the selected date
   const fieldEmployeesWithRecords = useMemo(() => {
@@ -40,6 +42,39 @@ function App() {
 
   const handleBackToTable = () => {
     setSelectedEmployee(null)
+  }
+
+  const handleShowRegistration = () => {
+    setShowRegistration(true)
+  }
+
+  const handleBackToDashboard = () => {
+    setShowRegistration(false)
+  }
+
+  if (showRegistration) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white">
+        <Helmet>
+          <title>ECKHO EMS - Employee Registration</title>
+          <meta name="description" content="Register new employee" />
+        </Helmet>
+        <Header
+          showUserDropdown={showUserDropdown}
+          onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
+          onSignOut={handleSignOut}
+          rightSlot={(
+            <button
+              onClick={handleBackToDashboard}
+              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-white rounded-md transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          )}
+        />
+        <EmployeeRegistration />
+      </div>
+    )
   }
 
   if (selectedEmployee) {
@@ -77,6 +112,14 @@ function App() {
         showUserDropdown={showUserDropdown}
         onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
         onSignOut={handleSignOut}
+        rightSlot={(
+          <button
+            onClick={handleShowRegistration}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 border border-blue-500 rounded-md transition-colors"
+          >
+            Register New Employee
+          </button>
+        )}
       />
 
       {/* Main Content */}
