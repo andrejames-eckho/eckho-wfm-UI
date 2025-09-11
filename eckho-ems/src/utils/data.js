@@ -1,3 +1,9 @@
+// Dummy admin credentials
+export const adminCredentials = {
+  username: 'admin',
+  password: 'admin123'
+}
+
 // Dummy employee data
 // Possible backend code
 export const dummyEmployees = [

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Helmet } from 'react-helmet-async'
 import Header from './components/Header'
+import Login from './components/Login'
 import DatePicker from './components/DatePicker'
 import EmployeeTable from './components/EmployeeTable'
 import EmployeeDetails from './components/EmployeeDetails'
@@ -9,10 +10,12 @@ import {
   dummyEmployees, 
   dummyFieldEmployees, 
   formatDate, 
-  getEmployeesWithTimeRecordsForDate 
+  getEmployeesWithTimeRecordsForDate,
+  adminCredentials
 } from './utils/data'
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState(null)
@@ -27,6 +30,14 @@ function App() {
     return getEmployeesWithTimeRecordsForDate(dummyEmployees, selectedDate)
   }, [selectedDate])
 
+  const handleLogin = (username, password) => {
+    if (username === adminCredentials.username && password === adminCredentials.password) {
+      setIsAuthenticated(true)
+    } else {
+      alert('Invalid username or password')
+    }
+  }
+
   const handleDateChange = (date) => {
     setSelectedDate(date)
   }
@@ -36,8 +47,10 @@ function App() {
   }
 
   const handleSignOut = () => {
-    alert('Sign out functionality would be implemented here')
+    setIsAuthenticated(false)
     setShowUserDropdown(false)
+    setSelectedEmployee(null)
+    setShowRegistration(false)
   }
 
   const handleBackToTable = () => {
@@ -50,6 +63,10 @@ function App() {
 
   const handleBackToDashboard = () => {
     setShowRegistration(false)
+  }
+
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />
   }
 
   if (showRegistration) {
