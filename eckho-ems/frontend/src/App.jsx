@@ -9,13 +9,9 @@ import EmployeeTable from './components/EmployeeTable'
 import EmployeeDetails from './components/EmployeeDetails'
 import EmployeeRegistration from './components/EmployeeRegistration'
 import { 
-  dummyEmployees, 
-  dummyFieldEmployees, 
-  formatDate, 
-  getEmployeesWithTimeRecordsForDate,
-  adminCredentials,
-  employeeCredentials
+  formatDate
 } from './utils/data'
+import { getEmployees, getTimeRecords } from './utils/api'
 
 function App() {
   const navigate = useNavigate()
@@ -87,13 +83,66 @@ function App() {
   }, [isAuthenticated, userType, location.pathname, navigate])
 
   // Get employees with time records for the selected date
-  const fieldEmployeesWithRecords = useMemo(() => {
-    return getEmployeesWithTimeRecordsForDate(dummyFieldEmployees, selectedDate)
-  }, [selectedDate])
+  const [employees, setEmployees] = useState([])
+  const [employeesWithRecords, setEmployeesWithRecords] = useState([])
 
-  const warehouseEmployeesWithRecords = useMemo(() => {
-    return getEmployeesWithTimeRecordsForDate(dummyEmployees, selectedDate)
-  }, [selectedDate])
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const all = await getEmployees()
+        if (cancelled) return
+        setEmployees(all)
+      } catch (e) {
+        console.error(e)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const allRecords = await getTimeRecords({ startDate: selectedDate, endDate: selectedDate })
+        if (cancelled) return
+        const mapByEmployee = new Map()
+        for (const emp of employees) {
+          mapByEmployee.set(emp.id, {
+            ...emp,
+            expectedTimeIn: emp.expectedStartTime || '08:00 AM',
+            expectedTimeOut: emp.expectedStartTime ? null : '05:00 PM',
+            timeIn: '-',
+            timeOut: '-',
+            breakIn: '-',
+            breakOut: '-',
+            status: 'No Record',
+            hasRecordForDate: false,
+          })
+        }
+        for (const rec of allRecords) {
+          const emp = mapByEmployee.get(rec.employeeId)
+          if (emp) {
+            mapByEmployee.set(rec.employeeId, {
+              ...emp,
+              expectedTimeIn: rec.expectedTimeIn ?? emp.expectedTimeIn,
+              expectedTimeOut: rec.expectedTimeOut ?? emp.expectedTimeOut,
+              timeIn: rec.timeIn ?? '-',
+              timeOut: rec.timeOut ?? '-',
+              breakIn: rec.breakIn ?? '-',
+              breakOut: rec.breakOut ?? '-',
+              status: rec.status ?? 'No Record',
+              hasRecordForDate: true,
+            })
+          }
+        }
+        setEmployeesWithRecords(Array.from(mapByEmployee.values()))
+      } catch (e) {
+        console.error(e)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [employees, selectedDate])
 
   const handleLogin = (username, password, userType, employeeId = null) => {
     if (userType === 'admin') {
@@ -199,20 +248,19 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-blue-400">
-                {fieldEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length}
+                {employeesWithRecords.filter(emp => emp.hasRecordForDate && emp.expectedStartTime).length}
               </div>
               <div className="text-sm text-gray-400">Field Employees with Records</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-green-400">
-                {warehouseEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length}
+                {employeesWithRecords.filter(emp => emp.hasRecordForDate && !emp.expectedStartTime).length}
               </div>
               <div className="text-sm text-gray-400">Warehouse Employees with Records</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-purple-400">
-                {fieldEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length + 
-                 warehouseEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length}
+                {employeesWithRecords.filter(emp => emp.hasRecordForDate).length}
               </div>
               <div className="text-sm text-gray-400">Total with Records</div>
             </div>
@@ -222,11 +270,11 @@ function App() {
         <div className="space-y-10">
           <div>
             <h3 className="text-xl font-semibold mb-4">Field</h3>
-            <EmployeeTable employees={fieldEmployeesWithRecords} onRowClick={handleEmployeeClick} />
+            <EmployeeTable employees={employeesWithRecords.filter(e => e.expectedStartTime)} onRowClick={handleEmployeeClick} />
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-4">Warehouse</h3>
-            <EmployeeTable employees={warehouseEmployeesWithRecords} onRowClick={handleEmployeeClick} />
+            <EmployeeTable employees={employeesWithRecords.filter(e => !e.expectedStartTime)} onRowClick={handleEmployeeClick} />
           </div>
         </div>
       </div>
@@ -244,8 +292,7 @@ function App() {
 
     const { id } = useParams()
     const employeeId = parseInt(id, 10)
-    const allEmployees = [...dummyFieldEmployees, ...dummyEmployees]
-    const employee = allEmployees.find(emp => emp.id === employeeId)
+    const employee = employees.find(emp => emp.id === employeeId)
     
     if (!employee || isNaN(employeeId)) {
       navigate('/')

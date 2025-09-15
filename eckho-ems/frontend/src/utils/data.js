@@ -1,23 +1,9 @@
 // Dummy admin credentials
-export const adminCredentials = {
-  username: 'admin',
-  password: 'admin123'
-}
+// Demo-only admin defaults; not used for real auth
+export const adminCredentials = { username: 'admin', password: 'admin123' }
 
 // Dummy employee credentials
-export const employeeCredentials = [
-  { id: 1, username: 'john.smith', password: 'emp123', employeeId: 1 },
-  { id: 2, username: 'sarah.johnson', password: 'emp123', employeeId: 2 },
-  { id: 3, username: 'mike.davis', password: 'emp123', employeeId: 3 },
-  { id: 4, username: 'emily.wilson', password: 'emp123', employeeId: 4 },
-  { id: 5, username: 'david.brown', password: 'emp123', employeeId: 5 },
-  { id: 6, username: 'lisa.anderson', password: 'emp123', employeeId: 6 },
-  { id: 101, username: 'ava.martinez', password: 'emp123', employeeId: 101 },
-  { id: 102, username: 'noah.clark', password: 'emp123', employeeId: 102 },
-  { id: 103, username: 'mia.lee', password: 'emp123', employeeId: 103 },
-  { id: 104, username: 'ethan.hernandez', password: 'emp123', employeeId: 104 },
-  { id: 105, username: 'isabella.walker', password: 'emp123', employeeId: 105 }
-]
+export const employeeCredentials = []
 
 // Employee time tracking data structure
 export const employeeTimeTracking = {
@@ -82,68 +68,7 @@ export const employeeTimeTracking = {
 
 // Dummy employee data
 // Possible backend code
-export const dummyEmployees = [
-  {
-    id: 1,
-    firstName: 'John',
-    lastName: 'Smith',
-    timeIn: '08:00 AM',
-    timeOut: '05:00 PM',
-    breakIn: '12:00 PM',
-    breakOut: '01:00 PM',
-    status: 'On Duty'
-  },
-  {
-    id: 2,
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    timeIn: '08:15 AM',
-    timeOut: '06:30 PM',
-    breakIn: '12:30 PM',
-    breakOut: '01:30 PM',
-    status: 'Overtime'
-  },
-  {
-    id: 3,
-    firstName: 'Mike',
-    lastName: 'Davis',
-    timeIn: '09:30 AM',
-    timeOut: null,
-    breakIn: '12:00 PM',
-    breakOut: '01:00 PM',
-    status: 'Late'
-  },
-  {
-    id: 4,
-    firstName: 'Emily',
-    lastName: 'Wilson',
-    timeIn: '08:00 AM',
-    timeOut: '04:30 PM',
-    breakIn: '02:00 PM',
-    breakOut: null,
-    status: 'On Break'
-  },
-  {
-    id: 5,
-    firstName: 'David',
-    lastName: 'Brown',
-    timeIn: '08:00 AM',
-    timeOut: '04:00 PM',
-    breakIn: '12:00 PM',
-    breakOut: '01:00 PM',
-    status: 'Undertime'
-  },
-  {
-    id: 6,
-    firstName: 'Lisa',
-    lastName: 'Anderson',
-    timeIn: '08:00 AM',
-    timeOut: '06:00 PM',
-    breakIn: '03:30 PM',
-    breakOut: '4:30 PM',
-    status: 'On Duty'
-  }
-]
+export const dummyEmployees = []
 
 export const statusColors = {
   'On Duty': 'bg-green-500',
@@ -355,63 +280,7 @@ const generateTimeRecords = (employee, monthsBack = 3) => {
 }
 
 // Additional dataset for Field employees
-export const dummyFieldEmployees = [
-  {
-    id: 101,
-    firstName: 'Ava',
-    lastName: 'Martinez',
-    timeIn: '11:30 PM',
-    timeOut: null,
-    breakIn: '12:10 AM',
-    breakOut: '12:50 AM',
-    expectedStartTime: '11:30 PM',
-    status: 'On Duty'
-  },
-  {
-    id: 102,
-    firstName: 'Noah',
-    lastName: 'Clark',
-    timeIn: '09:10 AM',
-    timeOut: '05:40 PM',
-    breakIn: '01:00 PM',
-    breakOut: null,
-    expectedStartTime: '09:00 AM',
-    status: 'On Break'
-  },
-  {
-    id: 103,
-    firstName: 'Mia',
-    lastName: 'Lee',
-    timeIn: '07:55 AM',
-    timeOut: '03:30 PM',
-    breakIn: '11:30 AM',
-    breakOut: '12:10 PM',
-    expectedStartTime: '07:00 AM',
-    status: 'Undertime'
-  },
-  {
-    id: 104,
-    firstName: 'Ethan',
-    lastName: 'Hernandez',
-    timeIn: '10:05 AM',
-    timeOut: '07:20 PM',
-    breakIn: '02:15 PM',
-    breakOut: '02:55 PM',
-    expectedStartTime: '10:00 AM',
-    status: 'Overtime'
-  },
-  {
-    id: 105,
-    firstName: 'Isabella',
-    lastName: 'Walker',
-    timeIn: '09:40 PM',
-    timeOut: '06:30 AM',
-    breakIn: '12:45 AM',
-    breakOut: '01:25 AM',
-    expectedStartTime: '09:30 PM',
-    status: 'Late'
-  }
-]
+export const dummyFieldEmployees = []
 
 // Generate time records for all employees
 export const generateEmployeeTimeRecords = (employee) => {

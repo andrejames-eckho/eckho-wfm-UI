@@ -4,11 +4,11 @@ import {
   getEmployeeStatus, 
   statusColors, 
   formatDate, 
-  generateEmployeeTimeRecords,
   filterTimeRecordsByDateRange,
   groupTimeRecordsByWeek,
   groupTimeRecordsByMonth
 } from '../utils/data'
+import { getTimeRecords } from '../utils/api'
 import DateRangePicker from './DateRangePicker'
 
 export default function EmployeeDetails({ employee }) {
@@ -17,9 +17,20 @@ export default function EmployeeDetails({ employee }) {
   const [customDateRange, setCustomDateRange] = useState({ start: null, end: null })
   const [showAllRecords, setShowAllRecords] = useState(false)
   
-  // Generate time records for the employee
-  const allTimeRecords = useMemo(() => {
-    return generateEmployeeTimeRecords(employee)
+  const [allTimeRecords, setAllTimeRecords] = useState([])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const records = await getTimeRecords({ employeeId: employee.id })
+        if (cancelled) return
+        setAllTimeRecords(records)
+      } catch (e) {
+        console.error(e)
+      }
+    })()
+    return () => { cancelled = true }
   }, [employee])
 
   // Filter records based on current view

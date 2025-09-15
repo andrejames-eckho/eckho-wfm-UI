@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Target, Eye, EyeOff } from 'lucide-react'
-import { adminCredentials, employeeCredentials } from '../utils/data'
+// TODO: Replace with real auth API. For now, allow any non-empty admin or employee login.
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('')
@@ -17,23 +17,16 @@ export default function Login({ onLogin }) {
       return
     }
 
-    // Check admin credentials first
-    if (username === adminCredentials.username && password === adminCredentials.password) {
+    // Temporary logic: treat "admin/*" as admin, anything else as employee id lookup placeholder
+    if (username.startsWith('admin')) {
       onLogin(username, password, 'admin')
       return
     }
-
-    // Check employee credentials
-    const employeeCred = employeeCredentials.find(cred => 
-      cred.username === username && cred.password === password
-    )
-    
-    if (employeeCred) {
-      onLogin(username, password, 'employee', employeeCred.employeeId)
+    const maybeId = Number(username.split('.').pop())
+    if (!Number.isNaN(maybeId)) {
+      onLogin(username, password, 'employee', maybeId)
       return
     }
-
-    // Invalid credentials
     setError('Invalid username or password')
   }
 
