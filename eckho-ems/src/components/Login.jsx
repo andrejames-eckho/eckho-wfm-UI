@@ -1,40 +1,24 @@
 import React, { useState } from 'react'
 import { Target, Eye, EyeOff } from 'lucide-react'
-import { adminCredentials, employeeCredentials } from '../utils/data'
+import { useAuth } from '../hooks/useAuth.jsx'
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
+  const { login, loading, error } = useAuth()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setError('')
     
     if (!username.trim() || !password.trim()) {
-      setError('Please enter both username and password')
       return
     }
 
-    // Check admin credentials first
-    if (username === adminCredentials.username && password === adminCredentials.password) {
-      onLogin(username, password, 'admin')
-      return
+    const result = await login(username, password)
+    if (result.success) {
+      onLogin(username, password, result.userType, result.employeeId)
     }
-
-    // Check employee credentials
-    const employeeCred = employeeCredentials.find(cred => 
-      cred.username === username && cred.password === password
-    )
-    
-    if (employeeCred) {
-      onLogin(username, password, 'employee', employeeCred.employeeId)
-      return
-    }
-
-    // Invalid credentials
-    setError('Invalid username or password')
   }
 
   return (
@@ -99,9 +83,10 @@ export default function Login({ onLogin }) {
 
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 border border-blue-500 rounded-md text-white font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+              disabled={loading}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed border border-blue-500 rounded-md text-white font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
             >
-              Sign In
+              {loading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
         </div>

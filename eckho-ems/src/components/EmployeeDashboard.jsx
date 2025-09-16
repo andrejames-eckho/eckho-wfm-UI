@@ -1,10 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import { Clock, Coffee, LogOut, User } from 'lucide-react'
-import { employeeTimeTracking, getEmployeeStatus } from '../utils/data'
+import { useAuth } from '../hooks/useAuth.jsx'
+import { useTimeTracking } from '../hooks/useTimeTracking.jsx'
 
 export default function EmployeeDashboard({ employee, onSignOut }) {
-  const [timeTracking, setTimeTracking] = useState(null)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [message, setMessage] = useState('')
+  const { currentEmployee } = useAuth()
+  
+  // Use the employee ID from auth or props
+  const employeeId = currentEmployee?.id || employee?.id
+  
+  const {
+    trackingData,
+    loading,
+    error,
+    timeIn,
+    timeOut,
+    breakIn,
+    breakOut,
+    refetch
+  } = useTimeTracking(employeeId)
 
   // Update current time every second
   useEffect(() => {
@@ -15,31 +31,21 @@ export default function EmployeeDashboard({ employee, onSignOut }) {
     return () => clearInterval(timer)
   }, [])
 
-  // Initialize time tracking for the employee
-  useEffect(() => {
-    const tracking = employeeTimeTracking.getTracking(employee.id)
-    setTimeTracking(tracking)
-  }, [employee.id])
-
-  const handleTimeIn = () => {
-    const updatedTracking = employeeTimeTracking.timeIn(employee.id)
-    setTimeTracking({ ...updatedTracking })
+  const handleTimeAction = async (action, actionFunction) => {
+    const result = await actionFunction()
+    if (result.success) {
+      setMessage(result.message)
+      setTimeout(() => setMessage(''), 3000)
+    } else {
+      setMessage(`Error: ${result.message}`)
+      setTimeout(() => setMessage(''), 5000)
+    }
   }
 
-  const handleTimeOut = () => {
-    const updatedTracking = employeeTimeTracking.timeOut(employee.id)
-    setTimeTracking({ ...updatedTracking })
-  }
-
-  const handleBreakIn = () => {
-    const updatedTracking = employeeTimeTracking.breakIn(employee.id)
-    setTimeTracking({ ...updatedTracking })
-  }
-
-  const handleBreakOut = () => {
-    const updatedTracking = employeeTimeTracking.breakOut(employee.id)
-    setTimeTracking({ ...updatedTracking })
-  }
+  const handleTimeIn = () => handleTimeAction('Time In', timeIn)
+  const handleTimeOut = () => handleTimeAction('Time Out', timeOut)
+  const handleBreakIn = () => handleTimeAction('Break In', breakIn)
+  const handleBreakOut = () => handleTimeAction('Break Out', breakOut)
 
   const getStatusColor = (status) => {
     const colors = {
@@ -51,10 +57,10 @@ export default function EmployeeDashboard({ employee, onSignOut }) {
     return colors[status] || 'bg-gray-600'
   }
 
-  const canTimeIn = !timeTracking?.timeIn
-  const canTimeOut = timeTracking?.timeIn && !timeTracking?.timeOut && timeTracking?.status !== 'On Break'
-  const canBreakIn = timeTracking?.timeIn && !timeTracking?.timeOut && !timeTracking?.breakIn
-  const canBreakOut = timeTracking?.breakIn && !timeTracking?.breakOut
+  const canTimeIn = !trackingData?.timeIn
+  const canTimeOut = trackingData?.timeIn && !trackingData?.timeOut && trackingData?.status !== 'On Break'
+  const canBreakIn = trackingData?.timeIn && !trackingData?.timeOut && !trackingData?.breakIn
+  const canBreakOut = trackingData?.breakIn && !trackingData?.breakOut
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -86,7 +92,7 @@ export default function EmployeeDashboard({ employee, onSignOut }) {
         {/* Welcome Section */}
         <div className="text-center mb-8">
           <h2 className="text-2xl font-semibold mb-2">
-            Welcome, {employee.firstName}!
+            Welcome, {employee?.firstName || currentEmployee?.firstName}!
           </h2>
           <p className="text-lg text-gray-400">
             Manage your time tracking for today
@@ -99,20 +105,37 @@ export default function EmployeeDashboard({ employee, onSignOut }) {
               hour12: true 
             })}
           </div>
+          {message && (
+            <div className={`mt-4 p-3 rounded-md ${
+              message.startsWith('Error') 
+                ? 'bg-red-900/50 border border-red-500 text-red-200' 
+                : 'bg-green-900/50 border border-green-500 text-green-200'
+            }`}>
+              {message}
+            </div>
+          )}
+          {loading && (
+            <div className="mt-4 text-blue-400">Processing...</div>
+          )}
+          {error && (
+            <div className="mt-4 p-3 bg-red-900/50 border border-red-500 rounded-md text-red-200">
+              Error: {error}
+            </div>
+          )}
         </div>
 
         {/* Status Card */}
         <div className="bg-gray-900 rounded-lg p-6 mb-6 border border-gray-800">
           <div className="text-center">
             <div className="flex items-center justify-center space-x-3 mb-4">
-              <div className={`w-4 h-4 rounded-full ${getStatusColor(timeTracking?.status)}`}></div>
-              <span className="text-lg font-medium">Status: {timeTracking?.status}</span>
+              <div className={`w-4 h-4 rounded-full ${getStatusColor(trackingData?.status)}`}></div>
+              <span className="text-lg font-medium">Status: {trackingData?.status || 'Not Started'}</span>
             </div>
             <div className="text-sm text-gray-400">
-              {timeTracking?.status === 'Not Started' && 'Ready to start your work day'}
-              {timeTracking?.status === 'On Duty' && 'You are currently working'}
-              {timeTracking?.status === 'On Break' && 'You are currently on break'}
-              {timeTracking?.status === 'Completed' && 'Work day completed'}
+              {(!trackingData?.status || trackingData?.status === 'Not Started') && 'Ready to start your work day'}
+              {trackingData?.status === 'On Duty' && 'You are currently working'}
+              {trackingData?.status === 'On Break' && 'You are currently on break'}
+              {trackingData?.status === 'Completed' && 'Work day completed'}
             </div>
           </div>
         </div>
@@ -130,14 +153,14 @@ export default function EmployeeDashboard({ employee, onSignOut }) {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-400">Time In:</span>
                 <span className="text-sm font-medium">
-                  {timeTracking?.timeIn || 'Not recorded'}
+                  {trackingData?.timeIn || 'Not recorded'}
                 </span>
               </div>
               
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-400">Time Out:</span>
                 <span className="text-sm font-medium">
-                  {timeTracking?.timeOut || 'Not recorded'}
+                  {trackingData?.timeOut || 'Not recorded'}
                 </span>
               </div>
               
@@ -180,14 +203,14 @@ export default function EmployeeDashboard({ employee, onSignOut }) {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-400">Break In:</span>
                 <span className="text-sm font-medium">
-                  {timeTracking?.breakIn || 'Not recorded'}
+                  {trackingData?.breakIn || 'Not recorded'}
                 </span>
               </div>
               
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-400">Break Out:</span>
                 <span className="text-sm font-medium">
-                  {timeTracking?.breakOut || 'Not recorded'}
+                  {trackingData?.breakOut || 'Not recorded'}
                 </span>
               </div>
               
@@ -226,19 +249,19 @@ export default function EmployeeDashboard({ employee, onSignOut }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-blue-400">
-                {timeTracking?.timeIn ? '✓' : '✗'}
+                {trackingData?.timeIn ? '✓' : '✗'}
               </div>
               <div className="text-sm text-gray-400">Time In</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-yellow-400">
-                {timeTracking?.breakIn ? '✓' : '✗'}
+                {trackingData?.breakIn ? '✓' : '✗'}
               </div>
               <div className="text-sm text-gray-400">Break Taken</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-green-400">
-                {timeTracking?.timeOut ? '✓' : '✗'}
+                {trackingData?.timeOut ? '✓' : '✗'}
               </div>
               <div className="text-sm text-gray-400">Time Out</div>
             </div>
