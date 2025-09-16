@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Target, Eye, EyeOff } from 'lucide-react'
+import { adminCredentials, employeeCredentials } from '../utils/data'
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('')
@@ -16,7 +17,24 @@ export default function Login({ onLogin }) {
       return
     }
 
-    onLogin(username, password)
+    // Check admin credentials first
+    if (username === adminCredentials.username && password === adminCredentials.password) {
+      onLogin(username, password, 'admin')
+      return
+    }
+
+    // Check employee credentials
+    const employeeCred = employeeCredentials.find(cred => 
+      cred.username === username && cred.password === password
+    )
+    
+    if (employeeCred) {
+      onLogin(username, password, 'employee', employeeCred.employeeId)
+      return
+    }
+
+    // Invalid credentials
+    setError('Invalid username or password')
   }
 
   return (
@@ -28,7 +46,7 @@ export default function Login({ onLogin }) {
             <Target className="w-10 h-10 text-white" />
             <h1 className="text-2xl font-semibold">ECKHO Workforce Management</h1>
           </div>
-          <p className="text-gray-400">Sign in to your admin account</p>
+          <p className="text-gray-400">Sign in to your account</p>
         </div>
 
         {/* Login Form */}
@@ -86,6 +104,20 @@ export default function Login({ onLogin }) {
               Sign In
             </button>
           </form>
+        </div>
+
+        {/* Demo Credentials */}
+        <div className="mt-6 bg-gray-900 rounded-lg p-4 border border-gray-800">
+          <h3 className="text-sm font-medium text-gray-300 mb-2">Demo Credentials:</h3>
+          <div className="text-xs text-gray-400 space-y-1">
+            <div className="font-medium text-blue-400">Admin:</div>
+            <div>Username: admin</div>
+            <div>Password: admin123</div>
+            <div className="font-medium text-green-400 mt-2">Employee:</div>
+            <div>Username: john.smith</div>
+            <div>Password: emp123</div>
+            <div className="text-gray-500 mt-1">Or use any employee's firstname.lastname</div>
+          </div>
         </div>
 
         {/* Footer */}

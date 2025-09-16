@@ -4,6 +4,82 @@ export const adminCredentials = {
   password: 'admin123'
 }
 
+// Dummy employee credentials
+export const employeeCredentials = [
+  { id: 1, username: 'john.smith', password: 'emp123', employeeId: 1 },
+  { id: 2, username: 'sarah.johnson', password: 'emp123', employeeId: 2 },
+  { id: 3, username: 'mike.davis', password: 'emp123', employeeId: 3 },
+  { id: 4, username: 'emily.wilson', password: 'emp123', employeeId: 4 },
+  { id: 5, username: 'david.brown', password: 'emp123', employeeId: 5 },
+  { id: 6, username: 'lisa.anderson', password: 'emp123', employeeId: 6 },
+  { id: 101, username: 'ava.martinez', password: 'emp123', employeeId: 101 },
+  { id: 102, username: 'noah.clark', password: 'emp123', employeeId: 102 },
+  { id: 103, username: 'mia.lee', password: 'emp123', employeeId: 103 },
+  { id: 104, username: 'ethan.hernandez', password: 'emp123', employeeId: 104 },
+  { id: 105, username: 'isabella.walker', password: 'emp123', employeeId: 105 }
+]
+
+// Employee time tracking data structure
+export const employeeTimeTracking = {
+  // Store current day's time tracking for each employee
+  currentDay: {},
+  
+  // Initialize time tracking for an employee
+  initializeEmployee: function(employeeId) {
+    if (!this.currentDay[employeeId]) {
+      this.currentDay[employeeId] = {
+        timeIn: null,
+        timeOut: null,
+        breakIn: null,
+        breakOut: null,
+        status: 'Not Started'
+      }
+    }
+    return this.currentDay[employeeId]
+  },
+  
+  // Time in
+  timeIn: function(employeeId) {
+    const tracking = this.initializeEmployee(employeeId)
+    const now = new Date()
+    tracking.timeIn = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    tracking.status = 'On Duty'
+    return tracking
+  },
+  
+  // Time out
+  timeOut: function(employeeId) {
+    const tracking = this.initializeEmployee(employeeId)
+    const now = new Date()
+    tracking.timeOut = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    tracking.status = 'Completed'
+    return tracking
+  },
+  
+  // Break in
+  breakIn: function(employeeId) {
+    const tracking = this.initializeEmployee(employeeId)
+    const now = new Date()
+    tracking.breakIn = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    tracking.status = 'On Break'
+    return tracking
+  },
+  
+  // Break out
+  breakOut: function(employeeId) {
+    const tracking = this.initializeEmployee(employeeId)
+    const now = new Date()
+    tracking.breakOut = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    tracking.status = 'On Duty'
+    return tracking
+  },
+  
+  // Get current tracking data
+  getTracking: function(employeeId) {
+    return this.initializeEmployee(employeeId)
+  }
+}
+
 // Dummy employee data
 // Possible backend code
 export const dummyEmployees = [
