@@ -7,10 +7,9 @@ from sqlalchemy.orm import Session
 import json
 
 from app.models.models import (
-    LoginRequest, LoginResponse, UserRole, EmployeeStatus,
-    TimeTrackingRequest, TimeTrackingResponse, TimeTrackingData,
+    LoginRequest, LoginResponse, UserRole, TimeTrackingRequest, TimeTrackingResponse,
     EmployeeListResponse, TimeRecordsResponse, DateRangeRequest,
-    StatusUpdateRequest, Employee, TimeRecord
+    StatusUpdateRequest, Employee, TimeRecord, EmployeeUpdateRequest
 )
 from app.services.auth import (
     create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -20,7 +19,7 @@ from app.services.db_service import (
     authenticate_admin_db, authenticate_employee_db, get_all_employees_db,
     get_employee_by_id_db, update_time_tracking_db, get_current_tracking_db,
     get_time_records_db, get_employees_for_date_db, update_employee_status_db,
-    get_dashboard_summary_db
+    get_dashboard_summary_db, update_employee_db
 )
 
 app = FastAPI(title="Eckho WFM Backend", version="1.0.0")
@@ -118,11 +117,35 @@ async def get_employee(employee_id: int, current_user: dict = Depends(get_curren
         current_user.get("employee_id") != employee_id):
         raise HTTPException(status_code=403, detail="Access denied")
     
-    employee = get_employee_by_id_db(db, employee_id)
-    if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found")
+    try:
+        employee = get_employee_by_id_db(db, employee_id)
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        return employee
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching employee: {str(e)}")
+
+@app.put("/api/employees/{employee_id}")
+async def update_employee(
+    employee_id: int, 
+    update_data: EmployeeUpdateRequest,
+    current_user: dict = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """Update employee details (admin only)"""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
     
-    return employee
+    try:
+        updated_employee = update_employee_db(db, employee_id, update_data)
+        if not updated_employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        return {"success": True, "message": "Employee updated successfully", "employee": updated_employee}
+    except ValueError as e:
+        # Handle password verification errors
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating employee: {str(e)}")
 
 @app.post("/api/time-tracking", response_model=TimeTrackingResponse)
 async def time_tracking_action(request: TimeTrackingRequest, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from app.models.db_models import Admin, Employee, CurrentTimeTracking, TimeRecord, EmployeeStatusEnum
-from app.models.models import Employee as EmployeeModel, TimeRecord as TimeRecordModel, TimeTrackingData, EmployeeStatus
+from app.models.models import Employee as EmployeeModel, TimeRecord as TimeRecordModel, TimeTrackingData, EmployeeStatus, EmployeeUpdateRequest
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -43,6 +43,9 @@ def get_all_employees_db(db: Session) -> List[EmployeeModel]:
                 id=emp.id,
                 firstName=emp.first_name,
                 lastName=emp.last_name,
+                username=emp.username,
+                type=emp.employee_type,
+                phoneNumber=getattr(emp, 'phone_number', None),
                 timeIn=tracking.time_in,
                 timeOut=tracking.time_out,
                 breakIn=tracking.break_in,
@@ -55,6 +58,9 @@ def get_all_employees_db(db: Session) -> List[EmployeeModel]:
                 id=emp.id,
                 firstName=emp.first_name,
                 lastName=emp.last_name,
+                username=emp.username,
+                type=emp.employee_type,
+                phoneNumber=getattr(emp, 'phone_number', None),
                 timeIn=None,
                 timeOut=None,
                 breakIn=None,
@@ -83,6 +89,9 @@ def get_employee_by_id_db(db: Session, employee_id: int) -> Optional[EmployeeMod
             id=emp.id,
             firstName=emp.first_name,
             lastName=emp.last_name,
+            username=emp.username,
+            type=emp.employee_type,
+            phoneNumber=getattr(emp, 'phone_number', None),
             timeIn=tracking.time_in,
             timeOut=tracking.time_out,
             breakIn=tracking.break_in,
@@ -95,6 +104,9 @@ def get_employee_by_id_db(db: Session, employee_id: int) -> Optional[EmployeeMod
             id=emp.id,
             firstName=emp.first_name,
             lastName=emp.last_name,
+            username=emp.username,
+            type=emp.employee_type,
+            phoneNumber=getattr(emp, 'phone_number', None),
             timeIn=None,
             timeOut=None,
             breakIn=None,
@@ -296,3 +308,77 @@ def get_dashboard_summary_db(db: Session) -> dict:
         "overtime": status_counts.get(EmployeeStatus.OVERTIME, 0),
         "late": status_counts.get(EmployeeStatus.LATE, 0)
     }
+
+def update_employee_db(db: Session, employee_id: int, update_data: EmployeeUpdateRequest) -> Optional[EmployeeModel]:
+    """Update employee details in database"""
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        return None
+    
+    # If password change is requested, verify old password first
+    if update_data.password:
+        if not update_data.oldPassword:
+            raise ValueError("Current password is required to change password")
+        
+        if not verify_password(update_data.oldPassword, employee.password_hash):
+            raise ValueError("Current password is incorrect")
+    
+    # Update employee fields
+    employee.first_name = update_data.firstName
+    employee.last_name = update_data.lastName
+    employee.username = update_data.username
+    employee.employee_type = update_data.type
+    employee.expected_start_time = update_data.expectedStartTime
+    
+    # Update password if provided and verified
+    if update_data.password:
+        employee.password_hash = hash_password(update_data.password)
+    
+    # Note: phoneNumber is not in the current database schema
+    # If you want to add it, you'll need to create a migration
+    
+    try:
+        db.commit()
+        db.refresh(employee)
+        
+        # Return updated employee data
+        tracking = db.query(CurrentTimeTracking).filter(
+            CurrentTimeTracking.employee_id == employee.id
+        ).first()
+        
+        if tracking:
+            return EmployeeModel(
+                id=employee.id,
+                firstName=employee.first_name,
+                lastName=employee.last_name,
+                username=employee.username,
+                type=employee.employee_type,
+                phoneNumber=getattr(employee, 'phone_number', None),
+                timeIn=tracking.time_in,
+                timeOut=tracking.time_out,
+                breakIn=tracking.break_in,
+                breakOut=tracking.break_out,
+                status=EmployeeStatus(tracking.status.value),
+                expectedStartTime=employee.expected_start_time
+            )
+        else:
+            return EmployeeModel(
+                id=employee.id,
+                firstName=employee.first_name,
+                lastName=employee.last_name,
+                username=employee.username,
+                type=employee.employee_type,
+                phoneNumber=getattr(employee, 'phone_number', None),
+                timeIn=None,
+                timeOut=None,
+                breakIn=None,
+                breakOut=None,
+                status=EmployeeStatus.NOT_STARTED,
+                expectedStartTime=employee.expected_start_time
+            )
+    except Exception as e:
+        db.rollback()
+        raise e
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)

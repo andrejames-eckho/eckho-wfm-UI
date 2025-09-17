@@ -50,6 +50,9 @@ class Employee(BaseModel):
     id: int
     firstName: str
     lastName: str
+    username: Optional[str] = None
+    type: Optional[str] = None
+    phoneNumber: Optional[str] = None
     timeIn: Optional[str] = None
     timeOut: Optional[str] = None
     breakIn: Optional[str] = None
@@ -97,3 +100,13 @@ class DateRangeRequest(BaseModel):
 class StatusUpdateRequest(BaseModel):
     employeeId: int
     status: EmployeeStatus
+
+class EmployeeUpdateRequest(BaseModel):
+    firstName: str
+    lastName: str
+    username: str
+    type: str
+    phoneNumber: Optional[str] = None
+    expectedStartTime: Optional[str] = None
+    oldPassword: Optional[str] = None
+    password: Optional[str] = None

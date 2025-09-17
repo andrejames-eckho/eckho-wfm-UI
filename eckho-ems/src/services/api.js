@@ -67,6 +67,15 @@ export const employeeAPI = {
       body: JSON.stringify({ startDate: date.toISOString() })
     });
     return handleResponse(response);
+  },
+
+  updateEmployee: async (id, employeeData) => {
+    const response = await fetch(`${API_BASE_URL}/employees/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(employeeData)
+    });
+    return handleResponse(response);
   }
 };
 
