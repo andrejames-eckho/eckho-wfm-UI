@@ -8,32 +8,17 @@ import DatePicker from './components/DatePicker'
 import EmployeeTable from './components/EmployeeTable'
 import EmployeeDetails from './components/EmployeeDetails'
 import EmployeeRegistration from './components/EmployeeRegistration'
-import { 
-  dummyEmployees, 
-  dummyFieldEmployees, 
-  formatDate, 
-  getEmployeesWithTimeRecordsForDate,
-  adminCredentials,
-  employeeCredentials
-} from './utils/data'
+import EmployeeManagement from './components/EmployeeManagement'
+import EmployeeEdit from './components/EmployeeEdit'
+import { AuthProvider, useAuth } from './hooks/useAuth.jsx'
+import { useEmployees } from './hooks/useEmployees.jsx'
+import { employeeAPI } from './services/api'
+import { formatDate } from './utils/data'
 
-function App() {
+function AppContent() {
   const navigate = useNavigate()
   const location = useLocation()
-  
-  // Initialize authentication state from localStorage
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('eckho_authenticated') === 'true'
-  })
-  
-  const [userType, setUserType] = useState(() => {
-    return localStorage.getItem('eckho_user_type') || 'admin' // 'admin' or 'employee'
-  })
-  
-  const [currentEmployee, setCurrentEmployee] = useState(() => {
-    const savedEmployee = localStorage.getItem('eckho_current_employee')
-    return savedEmployee ? JSON.parse(savedEmployee) : null
-  })
+  const { isAuthenticated, userType, currentEmployee, logout } = useAuth()
   
   const [selectedDate, setSelectedDate] = useState(() => {
     const savedDate = localStorage.getItem('eckho_selected_date')
@@ -44,24 +29,8 @@ function App() {
   const [selectedEmployee, setSelectedEmployee] = useState(null)
   const [showRegistration, setShowRegistration] = useState(false)
 
-  // Save authentication state to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('eckho_authenticated', isAuthenticated.toString())
-  }, [isAuthenticated])
-
-  // Save user type to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('eckho_user_type', userType)
-  }, [userType])
-
-  // Save current employee to localStorage whenever it changes
-  useEffect(() => {
-    if (currentEmployee) {
-      localStorage.setItem('eckho_current_employee', JSON.stringify(currentEmployee))
-    } else {
-      localStorage.removeItem('eckho_current_employee')
-    }
-  }, [currentEmployee])
+  // Use the new employees hook
+  const { employees, loading: employeesLoading } = useEmployees(selectedDate)
 
   // Save selected date to localStorage whenever it changes
   useEffect(() => {
@@ -86,36 +55,26 @@ function App() {
     }
   }, [isAuthenticated, userType, location.pathname, navigate])
 
-  // Get employees with time records for the selected date
-  const fieldEmployeesWithRecords = useMemo(() => {
-    return getEmployeesWithTimeRecordsForDate(dummyFieldEmployees, selectedDate)
-  }, [selectedDate])
+  // Separate field and warehouse employees
+  const fieldEmployees = useMemo(() => {
+    return employees.filter(emp => emp.expectedStartTime)
+  }, [employees])
 
-  const warehouseEmployeesWithRecords = useMemo(() => {
-    return getEmployeesWithTimeRecordsForDate(dummyEmployees, selectedDate)
-  }, [selectedDate])
+  const warehouseEmployees = useMemo(() => {
+    return employees.filter(emp => !emp.expectedStartTime)
+  }, [employees])
 
-  const handleLogin = (username, password, userType, employeeId = null) => {
+  const handleLogin = async (username, password, userType, employeeId = null) => {
     if (userType === 'admin') {
-      setIsAuthenticated(true)
-      setUserType('admin')
-      setCurrentEmployee(null)
       navigate('/')
     } else if (userType === 'employee' && employeeId) {
-      // Find the employee data
-      const allEmployees = [...dummyEmployees, ...dummyFieldEmployees]
-      const employee = allEmployees.find(emp => emp.id === employeeId)
-      
-      if (employee) {
-        setIsAuthenticated(true)
-        setUserType('employee')
-        setCurrentEmployee(employee)
+      // Fetch employee data from backend
+      try {
+        const employee = await employeeAPI.getById(employeeId)
         navigate('/employee-dashboard')
-      } else {
-        alert('Employee data not found')
+      } catch (error) {
+        console.error('Error fetching employee data:', error)
       }
-    } else {
-      alert('Invalid credentials')
     }
   }
 
@@ -125,16 +84,10 @@ function App() {
 
 
   const handleSignOut = () => {
-    setIsAuthenticated(false)
-    setUserType('admin')
-    setCurrentEmployee(null)
+    logout()
     setShowUserDropdown(false)
     setSelectedEmployee(null)
     setShowRegistration(false)
-    localStorage.removeItem('eckho_authenticated')
-    localStorage.removeItem('eckho_user_type')
-    localStorage.removeItem('eckho_current_employee')
-    localStorage.removeItem('eckho_selected_date')
     navigate('/login')
   }
 
@@ -150,6 +103,10 @@ function App() {
 
   const handleBackToDashboard = () => {
     navigate('/')
+  }
+
+  const handleBackToEmployees = () => {
+    navigate('/employees')
   }
 
   const handleEmployeeClick = (employee) => {
@@ -176,12 +133,20 @@ function App() {
           onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
           onSignOut={handleSignOut}
           rightSlot={(
-            <button
-              onClick={handleShowRegistration}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 border border-blue-500 rounded-md transition-colors"
-            >
-              Register New Employee
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate('/employees')}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 border border-green-500 rounded-md transition-colors"
+              >
+                Manage Employees
+              </button>
+              <button
+                onClick={handleShowRegistration}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 border border-blue-500 rounded-md transition-colors"
+              >
+                Register New Employee
+              </button>
+            </div>
           )}
         />
 
@@ -199,36 +164,41 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-blue-400">
-                {fieldEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length}
+                {fieldEmployees.filter(emp => emp.status !== 'No Record').length}
               </div>
               <div className="text-sm text-gray-400">Field Employees with Records</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-green-400">
-                {warehouseEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length}
+                {warehouseEmployees.filter(emp => emp.status !== 'No Record').length}
               </div>
               <div className="text-sm text-gray-400">Warehouse Employees with Records</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-purple-400">
-                {fieldEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length + 
-                 warehouseEmployeesWithRecords.filter(emp => emp.hasRecordForDate).length}
+                {employees.filter(emp => emp.status !== 'No Record').length}
               </div>
               <div className="text-sm text-gray-400">Total with Records</div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-10">
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Field</h3>
-            <EmployeeTable employees={fieldEmployeesWithRecords} onRowClick={handleEmployeeClick} />
+        {employeesLoading ? (
+          <div className="text-center py-8">
+            <div className="text-gray-400">Loading employees...</div>
           </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Warehouse</h3>
-            <EmployeeTable employees={warehouseEmployeesWithRecords} onRowClick={handleEmployeeClick} />
+        ) : (
+          <div className="space-y-10">
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Field</h3>
+              <EmployeeTable employees={fieldEmployees} onRowClick={handleEmployeeClick} />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Warehouse</h3>
+              <EmployeeTable employees={warehouseEmployees} onRowClick={handleEmployeeClick} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
     )
@@ -244,8 +214,7 @@ function App() {
 
     const { id } = useParams()
     const employeeId = parseInt(id, 10)
-    const allEmployees = [...dummyFieldEmployees, ...dummyEmployees]
-    const employee = allEmployees.find(emp => emp.id === employeeId)
+    const employee = employees.find(emp => emp.id === employeeId)
     
     if (!employee || isNaN(employeeId)) {
       navigate('/')
@@ -276,6 +245,86 @@ function App() {
     )
   }
 
+  // Component for Employee Management
+  const EmployeeManagementPage = () => {
+    // Access control - only admin can access employee management
+    if (userType !== 'admin') {
+      navigate('/employee-dashboard')
+      return null
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-950 text-white">
+        <Helmet>
+          <title>ECKHO WFM - Employee Management</title>
+          <meta name="description" content="Manage all enrolled employees" />
+        </Helmet>
+        <Header
+          showUserDropdown={showUserDropdown}
+          onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
+          onSignOut={handleSignOut}
+          rightSlot={(
+            <div className="flex gap-3">
+              <button
+                onClick={handleBackToDashboard}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-white rounded-md transition-colors"
+              >
+                Back to Dashboard
+              </button>
+              <button
+                onClick={handleShowRegistration}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 border border-blue-500 rounded-md transition-colors"
+              >
+                Register New Employee
+              </button>
+            </div>
+          )}
+        />
+        <EmployeeManagement />
+      </div>
+    )
+  }
+
+  // Component for Employee Edit
+  const EmployeeEditPage = () => {
+    // Access control - only admin can access employee edit
+    if (userType !== 'admin') {
+      navigate('/employee-dashboard')
+      return null
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-950 text-white">
+        <Helmet>
+          <title>ECKHO WFM - Edit Employee</title>
+          <meta name="description" content="Edit employee details" />
+        </Helmet>
+        <Header
+          showUserDropdown={showUserDropdown}
+          onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
+          onSignOut={handleSignOut}
+          rightSlot={(
+            <div className="flex gap-3">
+              <button
+                onClick={handleBackToEmployees}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 border border-green-500 rounded-md transition-colors"
+              >
+                Back to Employees
+              </button>
+              <button
+                onClick={handleBackToDashboard}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-white rounded-md transition-colors"
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          )}
+        />
+        <EmployeeEdit />
+      </div>
+    )
+  }
+
   // Component for Registration
   const RegistrationPage = () => {
     // Access control - only admin can access registration
@@ -295,12 +344,20 @@ function App() {
         onToggleUserDropdown={() => setShowUserDropdown(!showUserDropdown)}
         onSignOut={handleSignOut}
         rightSlot={(
-          <button
-            onClick={handleBackToDashboard}
-            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-white rounded-md transition-colors"
-          >
-            Back to Dashboard
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleBackToEmployees}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 border border-green-500 rounded-md transition-colors"
+            >
+              Back to Employees
+            </button>
+            <button
+              onClick={handleBackToDashboard}
+              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-white rounded-md transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         )}
       />
       <EmployeeRegistration />
@@ -328,10 +385,20 @@ function App() {
       <Route path="/login" element={<Login onLogin={handleLogin} />} />
       <Route path="/employee-dashboard" element={<EmployeeDashboardPage />} />
       <Route path="/" element={<Dashboard />} />
+      <Route path="/employees" element={<EmployeeManagementPage />} />
+      <Route path="/employees/edit/:id" element={<EmployeeEditPage />} />
       <Route path="/register" element={<RegistrationPage />} />
       <Route path="/employee/:id" element={<EmployeeDetailsPage />} />
       <Route path="*" element={<Dashboard />} />
     </Routes>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 
