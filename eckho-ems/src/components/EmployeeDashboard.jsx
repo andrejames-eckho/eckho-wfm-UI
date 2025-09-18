@@ -49,16 +49,19 @@ export default function EmployeeDashboard({ employee, onSignOut }) {
 
   const getStatusColor = (status) => {
     const colors = {
-      'Not Started': 'bg-gray-600',
-      'On Duty': 'bg-green-500',
-      'On Break': 'bg-yellow-500',
-      'Completed': 'bg-blue-500'
+      'NOT_STARTED': 'bg-gray-600',
+      'ON_DUTY': 'bg-green-500',
+      'ON_BREAK': 'bg-yellow-500',
+      'COMPLETED': 'bg-blue-500',
+      'LATE': 'bg-orange-500',
+      'OVERTIME': 'bg-purple-500',
+      'UNDERTIME': 'bg-blue-400'
     }
     return colors[status] || 'bg-gray-600'
   }
 
   const canTimeIn = !trackingData?.timeIn
-  const canTimeOut = trackingData?.timeIn && !trackingData?.timeOut && trackingData?.status !== 'On Break'
+  const canTimeOut = trackingData?.timeIn && !trackingData?.timeOut && trackingData?.status !== 'ON_BREAK'
   const canBreakIn = trackingData?.timeIn && !trackingData?.timeOut && !trackingData?.breakIn
   const canBreakOut = trackingData?.breakIn && !trackingData?.breakOut
 

@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8001/api';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 // Helper function to get auth token from localStorage
 const getAuthToken = () => {
@@ -17,9 +17,39 @@ const getAuthHeaders = () => {
 // Helper function to handle API responses
 const handleResponse = async (response) => {
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ detail: 'Network error' }));
-    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch (e) {
+      errorData = { 
+        detail: response.statusText || 'Network error',
+        status: response.status
+      };
+    }
+    
+    const error = new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    error.status = response.status;
+    error.data = errorData;
+    
+    // Handle specific error statuses
+    if (response.status === 401) {
+      // Unauthorized - clear auth and redirect to login
+      authHelpers.removeToken();
+      window.location.href = '/login';
+    } else if (response.status === 403) {
+      error.message = 'You do not have permission to perform this action';
+    } else if (response.status >= 500) {
+      error.message = 'Server error. Please try again later.';
+    }
+    
+    throw error;
   }
+  
+  // For 204 No Content responses
+  if (response.status === 204) {
+    return {};
+  }
+  
   return response.json();
 };
 
@@ -76,32 +106,58 @@ export const employeeAPI = {
       body: JSON.stringify(employeeData)
     });
     return handleResponse(response);
+  },
+
+  create: async (employeeData) => {
+    const response = await fetch(`${API_BASE_URL}/employees`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(employeeData)
+    });
+    return handleResponse(response);
   }
 };
 
 // Time tracking API
 export const timeTrackingAPI = {
   performAction: async (employeeId, action) => {
-    const response = await fetch(`${API_BASE_URL}/time-tracking`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ employeeId, action })
-    });
-    return handleResponse(response);
+    try {
+      const response = await fetch(`${API_BASE_URL}/time-tracking`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ employeeId, action })
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error(`Error performing time tracking action ${action}:`, error);
+      throw error;
+    }
   },
 
   getStatus: async (employeeId) => {
-    const response = await fetch(`${API_BASE_URL}/time-tracking/${employeeId}`, {
-      headers: getAuthHeaders()
-    });
-    return handleResponse(response);
+    try {
+      const response = await fetch(`${API_BASE_URL}/time-tracking/${employeeId}`, {
+        headers: getAuthHeaders()
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      if (error.status !== 404) { // Don't log 404s as they're expected for new employees
+        console.error(`Error getting time tracking status for employee ${employeeId}:`, error);
+      }
+      throw error;
+    }
   },
 
   getRecords: async (employeeId, months = 3) => {
-    const response = await fetch(`${API_BASE_URL}/time-records/${employeeId}?months=${months}`, {
-      headers: getAuthHeaders()
-    });
-    return handleResponse(response);
+    try {
+      const response = await fetch(`${API_BASE_URL}/time-records/${employeeId}?months=${months}`, {
+        headers: getAuthHeaders()
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error(`Error getting time records for employee ${employeeId}:`, error);
+      throw error;
+    }
   }
 };
 

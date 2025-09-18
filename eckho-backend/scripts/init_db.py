@@ -87,38 +87,25 @@ def init_employee_data(db: Session):
     print("Employee data initialized")
 
 def init_current_tracking_data(db: Session):
-    """Initialize current day tracking data with realistic statuses"""
+    """Initialize current day tracking data with all employees in NOT_STARTED state"""
     
-    # Sample current tracking data
-    tracking_data = [
-        {"employee_id": 1, "time_in": "08:00 AM", "time_out": "05:00 PM", "break_in": "12:00 PM", "break_out": "01:00 PM", "status": EmployeeStatusEnum.ON_DUTY},
-        {"employee_id": 2, "time_in": "08:15 AM", "time_out": "06:30 PM", "break_in": "12:30 PM", "break_out": "01:30 PM", "status": EmployeeStatusEnum.OVERTIME},
-        {"employee_id": 3, "time_in": "09:30 AM", "break_in": "12:00 PM", "break_out": "01:00 PM", "status": EmployeeStatusEnum.LATE},
-        {"employee_id": 4, "time_in": "08:00 AM", "time_out": "04:30 PM", "break_in": "02:00 PM", "status": EmployeeStatusEnum.ON_BREAK},
-        {"employee_id": 5, "time_in": "08:00 AM", "time_out": "04:00 PM", "break_in": "12:00 PM", "break_out": "01:00 PM", "status": EmployeeStatusEnum.UNDERTIME},
-        {"employee_id": 6, "time_in": "08:00 AM", "time_out": "06:00 PM", "break_in": "03:30 PM", "break_out": "04:30 PM", "status": EmployeeStatusEnum.ON_DUTY},
-        {"employee_id": 101, "time_in": "11:30 PM", "break_in": "12:10 AM", "break_out": "12:50 AM", "status": EmployeeStatusEnum.ON_DUTY},
-        {"employee_id": 102, "time_in": "09:10 AM", "time_out": "05:40 PM", "break_in": "01:00 PM", "status": EmployeeStatusEnum.ON_BREAK},
-        {"employee_id": 103, "time_in": "07:55 AM", "time_out": "03:30 PM", "break_in": "11:30 AM", "break_out": "12:10 PM", "status": EmployeeStatusEnum.UNDERTIME},
-        {"employee_id": 104, "time_in": "10:05 AM", "time_out": "07:20 PM", "break_in": "02:15 PM", "break_out": "02:55 PM", "status": EmployeeStatusEnum.OVERTIME},
-        {"employee_id": 105, "time_in": "09:40 PM", "time_out": "06:30 AM", "break_in": "12:45 AM", "break_out": "01:25 AM", "status": EmployeeStatusEnum.LATE},
-    ]
+    # Clear any existing tracking data
+    db.query(CurrentTimeTracking).delete()
     
-    for track_data in tracking_data:
-        existing_tracking = db.query(CurrentTimeTracking).filter(
-            CurrentTimeTracking.employee_id == track_data["employee_id"]
-        ).first()
-        
-        if not existing_tracking:
-            tracking = CurrentTimeTracking(
-                employee_id=track_data["employee_id"],
-                time_in=track_data.get("time_in"),
-                time_out=track_data.get("time_out"),
-                break_in=track_data.get("break_in"),
-                break_out=track_data.get("break_out"),
-                status=track_data["status"]
-            )
-            db.add(tracking)
+    # Get all employee IDs
+    employee_ids = [emp.id for emp in db.query(Employee).all()]
+    
+    # Initialize all employees with NOT_STARTED status and no time entries
+    for emp_id in employee_ids:
+        tracking = CurrentTimeTracking(
+            employee_id=emp_id,
+            time_in=None,
+            time_out=None,
+            break_in=None,
+            break_out=None,
+            status=EmployeeStatusEnum.NOT_STARTED
+        )
+        db.add(tracking)
     
     db.commit()
     print("Current tracking data initialized")

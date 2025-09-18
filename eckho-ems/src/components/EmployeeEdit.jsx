@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Key } from 'lucide-react'
 import { employeeAPI } from '../services/api'
 import { useAuth } from '../hooks/useAuth'
+import TimePicker from './TimePicker'
 
 const EmployeeEdit = () => {
   const { id } = useParams()
@@ -87,9 +89,10 @@ const EmployeeEdit = () => {
       errors.username = 'Username is required'
     }
     
-    if (formData.type === 'field' && !formData.expectedStartTime) {
-      errors.expectedStartTime = 'Expected start time is required for field employees'
-    }
+    // Expected start time is optional for all employees
+    // if (!formData.expectedStartTime) {
+    //   errors.expectedStartTime = 'Expected time in is required'
+    // }
     
     // If user wants to change password, old password is required
     if (formData.password && !formData.oldPassword) {
@@ -118,7 +121,7 @@ const EmployeeEdit = () => {
         username: formData.username.trim(),
         type: formData.type,
         phoneNumber: formData.phoneNumber.trim(),
-        expectedStartTime: formData.type === 'field' ? formData.expectedStartTime : null,
+        expectedStartTime: formData.expectedStartTime || null,
         oldPassword: formData.password ? formData.oldPassword : null, // Send old password only if changing password
         password: formData.password || null // Only send if password is provided
       }
@@ -297,58 +300,27 @@ const EmployeeEdit = () => {
             />
           </div>
 
-          {/* Expected Start Time (for field employees) */}
-          {formData.type === 'field' && (
-            <div>
-              <label htmlFor="expectedStartTime" className="block text-sm font-medium text-gray-300 mb-2">
-                Expected Start Time *
-              </label>
-              <input
-                type="text"
-                id="expectedStartTime"
-                name="expectedStartTime"
-                value={formData.expectedStartTime}
-                onChange={handleInputChange}
-                required={formData.type === 'field'}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                placeholder="e.g., 09:00 AM"
-              />
-            </div>
-          )}
-
-          {/* Current Password */}
+          {/* Expected Time In (for all employees) */}
           <div>
-            <label htmlFor="oldPassword" className="block text-sm font-medium text-gray-300 mb-2">
-              Current Password
+            <label htmlFor="expectedStartTime" className="block text-sm font-medium text-gray-300 mb-2">
+              Expected Time In
             </label>
-            <input
-              type="password"
-              id="oldPassword"
-              name="oldPassword"
-              value={formData.oldPassword}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              placeholder="Enter current password to change password"
+            <TimePicker
+              value={formData.expectedStartTime}
+              onChange={(time) => {
+                setFormData(prev => ({
+                  ...prev,
+                  expectedStartTime: time
+                }))
+                // Clear messages when user selects a time
+                if (error) setError(null)
+                if (successMessage) setSuccessMessage('')
+              }}
+              className="w-full"
             />
-            <p className="text-sm text-gray-400 mt-1">Required only if changing password</p>
+            <p className="text-sm text-gray-400 mt-1">Set the expected time for this employee to start work</p>
           </div>
 
-          {/* New Password */}
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-              New Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              placeholder="Leave blank to keep current password"
-            />
-            <p className="text-sm text-gray-400 mt-1">Leave blank to keep the current password</p>
-          </div>
         </div>
 
         {/* Form Actions */}
@@ -366,10 +338,86 @@ const EmployeeEdit = () => {
             disabled={saving}
             className="px-6 py-2 bg-blue-600 hover:bg-blue-700 border border-blue-500 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? 'Saving...' : 'Save Employee Details'}
           </button>
         </div>
       </form>
+
+      {/* Password Change Section */}
+      <div className="bg-gray-900 rounded-lg p-6 border border-gray-800 mt-6">
+        <div className="mb-6">
+          <div className="flex items-center space-x-3 mb-2">
+            <Key className="w-5 h-5 text-orange-400" />
+            <h3 className="text-lg font-semibold text-gray-200">Change Password</h3>
+          </div>
+          <p className="text-gray-400 text-sm">Update the employee's login password. Both fields are required to change the password.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Current Password */}
+            <div>
+              <label htmlFor="oldPassword" className="block text-sm font-medium text-gray-300 mb-2">
+                Current Password *
+              </label>
+              <input
+                type="password"
+                id="oldPassword"
+                name="oldPassword"
+                value={formData.oldPassword}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                placeholder="Enter current password"
+              />
+              <p className="text-sm text-gray-400 mt-1">Required to verify identity</p>
+            </div>
+
+            {/* New Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                New Password *
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                placeholder="Enter new password"
+              />
+              <p className="text-sm text-gray-400 mt-1">Minimum 6 characters</p>
+            </div>
+          </div>
+
+          {/* Password Change Actions */}
+          <div className="flex justify-end gap-4 pt-4 border-t border-gray-700">
+            <button
+              type="button"
+              onClick={() => {
+                setFormData(prev => ({
+                  ...prev,
+                  oldPassword: '',
+                  password: ''
+                }))
+                if (error) setError(null)
+                if (successMessage) setSuccessMessage('')
+              }}
+              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 border border-gray-500 rounded-md transition-colors text-sm"
+              disabled={saving}
+            >
+              Clear
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !formData.oldPassword || !formData.password}
+              className="px-6 py-2 bg-orange-600 hover:bg-orange-700 border border-orange-500 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              {saving ? 'Updating Password...' : 'Update Password'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

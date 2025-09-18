@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from app.models.db_models import Admin, Employee, CurrentTimeTracking, TimeRecord, EmployeeStatusEnum
-from app.models.models import Employee as EmployeeModel, TimeRecord as TimeRecordModel, TimeTrackingData, EmployeeStatus, EmployeeUpdateRequest
+from app.models.models import Employee as EmployeeModel, TimeRecord as TimeRecordModel, TimeTrackingData, EmployeeStatus, EmployeeUpdateRequest, EmployeeCreateRequest
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -382,3 +382,78 @@ def update_employee_db(db: Session, employee_id: int, update_data: EmployeeUpdat
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
+
+def create_employee_db(db: Session, employee_data: EmployeeCreateRequest) -> Optional[EmployeeModel]:
+    """Create a new employee in the database"""
+    
+    # Map department to employee_type
+    department_mapping = {
+        "Field Operations": "field",
+        "Warehouse": "warehouse",
+        "Administration": "warehouse",
+        "Management": "warehouse", 
+        "IT Support": "warehouse",
+        "Human Resources": "warehouse"
+    }
+    
+    employee_type = department_mapping.get(employee_data.department, "warehouse")
+    
+    # Check if username already exists
+    existing_employee = db.query(Employee).filter(Employee.username == employee_data.username).first()
+    if existing_employee:
+        raise ValueError("Username already exists")
+    
+    # Check if ID number already exists (using it as employee ID)
+    try:
+        employee_id = int(employee_data.idNumber)
+        existing_id = db.query(Employee).filter(Employee.id == employee_id).first()
+        if existing_id:
+            raise ValueError("Employee ID already exists")
+    except ValueError as e:
+        if "Employee ID already exists" in str(e):
+            raise e
+        raise ValueError("ID Number must be a valid integer")
+    
+    # Create new employee
+    new_employee = Employee(
+        id=employee_id,
+        first_name=employee_data.firstName,
+        last_name=employee_data.lastName,
+        username=employee_data.username,
+        password_hash=hash_password(employee_data.password),
+        employee_type=employee_type,
+        expected_start_time=employee_data.expectedStartTime if employee_type == "field" else None
+    )
+    
+    try:
+        db.add(new_employee)
+        db.commit()
+        db.refresh(new_employee)
+        
+        # Create initial current tracking record
+        initial_tracking = CurrentTimeTracking(
+            employee_id=new_employee.id,
+            status=EmployeeStatusEnum.NOT_STARTED
+        )
+        db.add(initial_tracking)
+        db.commit()
+        
+        # Return employee model
+        return EmployeeModel(
+            id=new_employee.id,
+            firstName=new_employee.first_name,
+            lastName=new_employee.last_name,
+            username=new_employee.username,
+            type=new_employee.employee_type,
+            phoneNumber=None,
+            timeIn=None,
+            timeOut=None,
+            breakIn=None,
+            breakOut=None,
+            status=EmployeeStatus.NOT_STARTED,
+            expectedStartTime=new_employee.expected_start_time
+        )
+        
+    except Exception as e:
+        db.rollback()
+        raise e

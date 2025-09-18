@@ -110,3 +110,19 @@ class EmployeeUpdateRequest(BaseModel):
     expectedStartTime: Optional[str] = None
     oldPassword: Optional[str] = None
     password: Optional[str] = None
+
+class EmployeeCreateRequest(BaseModel):
+    idNumber: str
+    firstName: str
+    lastName: str
+    username: str
+    password: str
+    department: str
+    expectedStartTime: Optional[str] = None
+    faceData: Optional[str] = None
+    fingerprintData: Optional[str] = None
+
+class EmployeeCreateResponse(BaseModel):
+    success: bool
+    message: str
+    employee: Optional[Employee] = None

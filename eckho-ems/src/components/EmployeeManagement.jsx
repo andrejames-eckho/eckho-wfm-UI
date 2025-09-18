@@ -111,6 +111,38 @@ const EmployeeManagement = () => {
         case 'status':
           comparison = (a.status || '').localeCompare(b.status || '')
           break
+        case 'expectedStartTime':
+          // Convert time strings to comparable format (handle both 12-hour and 24-hour)
+          const timeA = a.expectedStartTime || ''
+          const timeB = b.expectedStartTime || ''
+          
+          // Helper function to convert time to 24-hour format for comparison
+          const convertTo24Hour = (timeStr) => {
+            if (!timeStr) return '00:00'
+            
+            // If already in 24-hour format (HH:MM)
+            if (/^\d{1,2}:\d{2}$/.test(timeStr)) {
+              return timeStr.padStart(5, '0')
+            }
+            
+            // If in 12-hour format (HH:MM AM/PM)
+            const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+            if (match) {
+              let hour = parseInt(match[1])
+              const minute = match[2]
+              const period = match[3].toUpperCase()
+              
+              if (period === 'AM' && hour === 12) hour = 0
+              if (period === 'PM' && hour !== 12) hour += 12
+              
+              return `${hour.toString().padStart(2, '0')}:${minute}`
+            }
+            
+            return '00:00'
+          }
+          
+          comparison = convertTo24Hour(timeA).localeCompare(convertTo24Hour(timeB))
+          break
         default:
           comparison = 0
       }
@@ -263,6 +295,14 @@ const EmployeeManagement = () => {
                     Type {sortBy === 'type' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </div>
                 </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-700 transition-colors"
+                  onClick={() => handleFilterToggle('expectedStartTime')}
+                >
+                  <div className="flex items-center">
+                    Expected Time In {sortBy === 'expectedStartTime' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Phone
                 </th>
@@ -279,7 +319,7 @@ const EmployeeManagement = () => {
             <tbody className="divide-y divide-gray-800">
               {filteredAndSortedEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
                     {searchTerm || filterType !== 'all' 
                       ? 'No employees match your search criteria' 
                       : 'No employees found'
@@ -312,6 +352,18 @@ const EmployeeManagement = () => {
                         <span className={`text-sm font-medium capitalize ${getEmployeeTypeColor(employee.type || 'warehouse')}`}>
                           {employee.type || 'warehouse'}
                         </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <div className="flex items-center">
+                        {employee.expectedStartTime ? (
+                          <>
+                            <span className="text-blue-400 mr-1">🕐</span>
+                            <span>{employee.expectedStartTime}</span>
+                          </>
+                        ) : (
+                          <span className="text-gray-500 italic">Not set</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">

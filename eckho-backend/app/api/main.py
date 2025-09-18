@@ -9,7 +9,8 @@ import json
 from app.models.models import (
     LoginRequest, LoginResponse, UserRole, TimeTrackingRequest, TimeTrackingResponse,
     EmployeeListResponse, TimeRecordsResponse, DateRangeRequest,
-    StatusUpdateRequest, Employee, TimeRecord, EmployeeUpdateRequest
+    StatusUpdateRequest, Employee, TimeRecord, EmployeeUpdateRequest,
+    EmployeeCreateRequest, EmployeeCreateResponse
 )
 from app.services.auth import (
     create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -19,7 +20,7 @@ from app.services.db_service import (
     authenticate_admin_db, authenticate_employee_db, get_all_employees_db,
     get_employee_by_id_db, update_time_tracking_db, get_current_tracking_db,
     get_time_records_db, get_employees_for_date_db, update_employee_status_db,
-    get_dashboard_summary_db, update_employee_db
+    get_dashboard_summary_db, update_employee_db, create_employee_db
 )
 
 app = FastAPI(title="Eckho WFM Backend", version="1.0.0")
@@ -108,6 +109,29 @@ async def get_employees(current_user: dict = Depends(get_current_user), db: Sess
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching employees: {str(e)}")
+
+@app.post("/api/employees", response_model=EmployeeCreateResponse)
+async def create_employee(
+    employee_data: EmployeeCreateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new employee (admin only)"""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        new_employee = create_employee_db(db, employee_data)
+        return EmployeeCreateResponse(
+            success=True,
+            message=f"Employee {employee_data.firstName} {employee_data.lastName} registered successfully",
+            employee=new_employee
+        )
+    except ValueError as e:
+        # Handle validation errors (username exists, invalid ID, etc.)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating employee: {str(e)}")
 
 @app.get("/api/employees/{employee_id}")
 async def get_employee(employee_id: int, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):

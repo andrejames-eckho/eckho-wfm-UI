@@ -1,15 +1,23 @@
 import React, { useState } from 'react'
 import { UserPlus, Camera, Fingerprint, Upload, CheckCircle } from 'lucide-react'
+import { employeeAPI } from '../services/api'
+import TimePicker from './TimePicker'
 
 export default function EmployeeRegistration() {
   const [formData, setFormData] = useState({
     idNumber: '',
     firstName: '',
     lastName: '',
-    department: ''
+    username: '',
+    password: '',
+    confirmPassword: '',
+    department: '',
+    expectedStartTime: ''
   })
 
   const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   const [biometricData, setBiometricData] = useState({
     faceData: null,
     fingerprintData: null,
@@ -59,9 +67,32 @@ export default function EmployeeRegistration() {
       newErrors.lastName = 'Last Name is required'
     }
     
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required'
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters'
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required'
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters'
+    }
+    
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password'
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match'
+    }
+    
     if (!formData.department) {
       newErrors.department = 'Department is required'
     }
+    
+    // Expected start time is optional for all employees
+    // if (!formData.expectedStartTime) {
+    //   newErrors.expectedStartTime = 'Expected time in is required'
+    // }
     
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -89,28 +120,76 @@ export default function EmployeeRegistration() {
     }, 2000)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     
     if (validateForm()) {
-      // For now, just show success message
-      alert(`Employee ${formData.firstName} ${formData.lastName} registered successfully!`)
+      setLoading(true)
+      setErrors({})
+      setSuccessMessage('')
       
-      // Reset form
-      setFormData({
-        idNumber: '',
-        firstName: '',
-        lastName: '',
-        department: ''
-      })
-      
-      // Reset biometric data
-      setBiometricData({
-        faceData: null,
-        fingerprintData: null,
-        faceCaptured: false,
-        fingerprintCaptured: false
-      })
+      try {
+        // Convert time format for expected start time
+        let expectedStartTime = null
+        if (formData.expectedStartTime) {
+          const [hours, minutes] = formData.expectedStartTime.split(':')
+          const hour24 = parseInt(hours)
+          let hour12 = hour24 > 12 ? hour24 - 12 : hour24
+          if (hour12 === 0) hour12 = 12 // Handle midnight (00:xx) and noon (12:xx)
+          const ampm = hour24 >= 12 ? 'PM' : 'AM'
+          expectedStartTime = `${hour12}:${minutes} ${ampm}`
+        }
+
+        const employeeData = {
+          idNumber: formData.idNumber,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          username: formData.username,
+          password: formData.password,
+          department: formData.department,
+          expectedStartTime: expectedStartTime,
+          faceData: biometricData.faceData,
+          fingerprintData: biometricData.fingerprintData
+        }
+
+        const response = await employeeAPI.create(employeeData)
+        
+        if (response.success) {
+          setSuccessMessage(response.message)
+          
+          // Reset form
+          setFormData({
+            idNumber: '',
+            firstName: '',
+            lastName: '',
+            username: '',
+            password: '',
+            confirmPassword: '',
+            department: '',
+            expectedStartTime: ''
+          })
+          
+          // Reset biometric data
+          setBiometricData({
+            faceData: null,
+            fingerprintData: null,
+            faceCaptured: false,
+            fingerprintCaptured: false
+          })
+        }
+      } catch (error) {
+        console.error('Registration error:', error)
+        if (error.status === 400) {
+          // Handle validation errors from backend
+          setErrors({ general: error.message })
+        } else if (error.status === 403) {
+          setErrors({ general: 'You do not have permission to register employees. Please login as admin.' })
+        } else {
+          setErrors({ general: 'Registration failed. Please try again.' })
+        }
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
@@ -131,6 +210,20 @@ export default function EmployeeRegistration() {
             <div className="text-center mb-8">
               <h2 className="text-xl font-semibold mb-2">Register New Employee</h2>
               <p className="text-gray-400">Enter the employee information below</p>
+              
+              {/* Success Message */}
+              {successMessage && (
+                <div className="mt-4 p-4 bg-green-900 border border-green-700 rounded-md">
+                  <p className="text-green-300">{successMessage}</p>
+                </div>
+              )}
+              
+              {/* General Error Message */}
+              {errors.general && (
+                <div className="mt-4 p-4 bg-red-900 border border-red-700 rounded-md">
+                  <p className="text-red-300">{errors.general}</p>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -197,6 +290,69 @@ export default function EmployeeRegistration() {
                 )}
               </div>
 
+              {/* Username */}
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
+                  Username *
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 bg-gray-800 border rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    errors.username ? 'border-red-500' : 'border-gray-600'
+                  }`}
+                  placeholder="Enter username for login"
+                />
+                {errors.username && (
+                  <p className="mt-1 text-sm text-red-400">{errors.username}</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 bg-gray-800 border rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    errors.password ? 'border-red-500' : 'border-gray-600'
+                  }`}
+                  placeholder="Enter password (min 6 characters)"
+                />
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-400">{errors.password}</p>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+                  Confirm Password *
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 bg-gray-800 border rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    errors.confirmPassword ? 'border-red-500' : 'border-gray-600'
+                  }`}
+                  placeholder="Confirm password"
+                />
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>
+                )}
+              </div>
+
               {/* Department */}
               <div>
                 <label htmlFor="department" className="block text-sm font-medium text-gray-300 mb-2">
@@ -220,6 +376,34 @@ export default function EmployeeRegistration() {
                 </select>
                 {errors.department && (
                   <p className="mt-1 text-sm text-red-400">{errors.department}</p>
+                )}
+              </div>
+
+              {/* Expected Start Time - For all employees */}
+              <div>
+                <label htmlFor="expectedStartTime" className="block text-sm font-medium text-gray-300 mb-2">
+                  Expected Time In
+                </label>
+                <TimePicker
+                  value={formData.expectedStartTime}
+                  onChange={(time) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      expectedStartTime: time
+                    }))
+                    // Clear error when user selects a time
+                    if (errors.expectedStartTime) {
+                      setErrors(prev => ({
+                        ...prev,
+                        expectedStartTime: ''
+                      }))
+                    }
+                  }}
+                  error={!!errors.expectedStartTime}
+                />
+                <p className="mt-1 text-sm text-gray-400">Set the expected time for this employee to start work</p>
+                {errors.expectedStartTime && (
+                  <p className="mt-1 text-sm text-red-400">{errors.expectedStartTime}</p>
                 )}
               </div>
 
@@ -321,9 +505,14 @@ export default function EmployeeRegistration() {
               <div className="pt-4">
                 <button
                   type="submit"
-                  className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                  disabled={loading}
+                  className={`w-full px-6 py-3 font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
+                    loading 
+                      ? 'bg-gray-600 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
                 >
-                  Register Employee
+                  {loading ? 'Registering...' : 'Register Employee'}
                 </button>
               </div>
             </form>
