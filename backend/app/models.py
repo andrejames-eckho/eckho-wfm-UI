@@ -10,6 +10,11 @@ class RecordType(str, enum.Enum):
     BREAK_IN = "Break In"
     BREAK_OUT = "Break Out"
 
+class Department(str, enum.Enum):
+    FIELD = "Field"
+    WAREHOUSE = "Warehouse"
+    
+
 class User(Base):
     __tablename__ = "users"
 
@@ -17,7 +22,7 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
-    department = Column(String, nullable=False)
+    department = Column(Enum(Department), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     time_records = relationship("TimeRecord", back_populates="user")

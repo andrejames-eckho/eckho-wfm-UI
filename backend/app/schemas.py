@@ -1,13 +1,13 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import List, Optional
-from .models import RecordType
+from .models import RecordType, Department
 
 class UserBase(BaseModel):
     username: str
     first_name: str
     last_name: str
-    department: str
+    department: Department
 
 class UserCreate(UserBase):
     pass
