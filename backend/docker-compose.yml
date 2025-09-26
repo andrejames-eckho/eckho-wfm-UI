@@ -1,4 +1,5 @@
-version: '3.8'
+# Docker Compose v2 format
+# Use with: docker compose up -d
 
 services:
   db:
