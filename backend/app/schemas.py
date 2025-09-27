@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, date, time
 from typing import List, Optional
 from .models import RecordType, Department
 
