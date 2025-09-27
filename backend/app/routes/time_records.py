@@ -1,29 +1,44 @@
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from .. import schemas, crud
+from .. import schemas
 from ..database import get_db
+from ..services import time_record_service
 
 router = APIRouter(prefix="/time-records", tags=["time-records"])
 
-@router.post("/", response_model=schemas.TimeRecord)
+@router.post("/", response_model=schemas.TimeRecord, status_code=status.HTTP_201_CREATED)
 def create_time_record(
-    time_record: schemas.TimeRecordCreate, db: Session = Depends(get_db)
+    time_record: schemas.TimeRecordCreate, 
+    db: Session = Depends(get_db)
 ):
-    return crud.create_time_record(db=db, time_record=time_record)
+    return time_record_service.create(db, obj_in=time_record)
 
 @router.get("/", response_model=list[schemas.TimeRecord])
-def read_time_records(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    time_records = crud.get_time_records(db, skip=skip, limit=limit)
-    return time_records
+def read_time_records(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db)
+):
+    return time_record_service.get_multi(db, skip=skip, limit=limit)
 
 @router.get("/user/{user_id}", response_model=list[schemas.TimeRecord])
-def read_user_time_records(user_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    time_records = crud.get_user_time_records(db, user_id=user_id, skip=skip, limit=limit)
-    return time_records
+def read_user_time_records(
+    user_id: int, 
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db)
+):
+    return time_record_service.get_user_time_records(
+        db, 
+        user_id=user_id, 
+        skip=skip, 
+        limit=limit
+    )
 
 @router.delete("/{time_record_id}", response_model=schemas.TimeRecord)
-def delete_time_record(time_record_id: int, db: Session = Depends(get_db)):
-    db_time_record = crud.delete_time_record(db, time_record_id=time_record_id)
-    if db_time_record is None:
-        raise HTTPException(status_code=404, detail="Time record not found")
-    return db_time_record
+def delete_time_record(
+    time_record_id: int, 
+    db: Session = Depends(get_db)
+):
+    return time_record_service.delete(db, id=time_record_id)
