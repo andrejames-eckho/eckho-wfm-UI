@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Date, Time  
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -25,15 +25,15 @@ class User(Base):
     department = Column(Enum(Department), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    time_records = relationship("TimeRecord", back_populates="user")
+    time_records = relationship("TimeRecord", back_populates="user", cascade="all, delete-orphan")
 
 class TimeRecord(Base):
     __tablename__ = "time_records"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    date = Column(DateTime, nullable=False)
-    time = Column(DateTime, nullable=False)
+    date = Column(Date, nullable=False)
+    time = Column(Time, nullable=False)
     record_type = Column(Enum(RecordType), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

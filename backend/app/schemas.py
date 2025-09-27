@@ -21,8 +21,8 @@ class User(UserBase):
 
 class TimeRecordBase(BaseModel):
     user_id: int
-    date: datetime
-    time: datetime
+    date: date
+    time: time
     record_type: RecordType
 
 class TimeRecordCreate(TimeRecordBase):

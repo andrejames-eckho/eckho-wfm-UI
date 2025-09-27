@@ -41,3 +41,11 @@ def get_user_time_records(db: Session, user_id: int, skip: int = 0, limit: int =
     return db.query(models.TimeRecord).filter(
         models.TimeRecord.user_id == user_id
     ).order_by(models.TimeRecord.date.desc()).offset(skip).limit(limit).all()
+
+def delete_user(db: Session, user_id: int):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        return None
+    db.delete(db_user)
+    db.commit()
+    return db_user
