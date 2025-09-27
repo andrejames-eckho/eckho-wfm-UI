@@ -49,3 +49,11 @@ def delete_user(db: Session, user_id: int):
     db.delete(db_user)
     db.commit()
     return db_user
+
+def delete_time_record(db: Session, time_record_id: int):
+    db_time_record = db.query(models.TimeRecord).filter(models.TimeRecord.id == time_record_id).first()
+    if not db_time_record:
+        return None
+    db.delete(db_time_record)
+    db.commit()
+    return db_time_record
