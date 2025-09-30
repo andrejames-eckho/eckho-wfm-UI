@@ -1,80 +1,83 @@
-from datetime import date, time, datetime
-from typing import List, Optional
+# app/services/time_record_service.py
+from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
+from datetime import datetime, date, time
 from .. import models, schemas
 from .base_service import BaseService
-from .user_service import UserService
 
-class TimeRecordService(BaseService[models.TimeRecord]):
+class TimeRecordService(BaseService[models.TimeRecord, schemas.TimeRecordCreate, schemas.TimeRecordUpdate]):
     def __init__(self):
         super().__init__(models.TimeRecord)
-        self.user_service = UserService()
-
-    def create(self, db: Session, *, obj_in: schemas.TimeRecordCreate) -> models.TimeRecord:
-        # Verify user exists
-        user = self.user_service.get(db, obj_in.user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Create new time record
-        db_time_record = models.TimeRecord(
-            user_id=obj_in.user_id,
-            date=obj_in.date,
-            time=obj_in.time,
-            record_type=obj_in.record_type
-        )
-        
-        db.add(db_time_record)
-        db.commit()
-        db.refresh(db_time_record)
-        return db_time_record
 
     def get_user_time_records(
-        self, db: Session, user_id: int, skip: int = 0, limit: int = 100
+        self,
+        db: Session,
+        user_id: int,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        record_type: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 100
     ) -> List[models.TimeRecord]:
-        # Verify user exists
-        if not self.user_service.get(db, user_id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
+        query = db.query(self.model).filter(self.model.user_id == user_id)
+        
+        if start_date:
+            query = query.filter(self.model.date >= start_date)
+        if end_date:
+            query = query.filter(self.model.date <= end_date)
+        if record_type:
+            query = query.filter(self.model.record_type == record_type)
             
-        return (
-            db.query(self.model)
-            .filter(self.model.user_id == user_id)
-            .order_by(self.model.date.desc(), self.model.time.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        return query.order_by(self.model.date.desc(), self.model.time.desc()).offset(skip).limit(limit).all()
 
-    def get_user_records_for_date(
-        self, db: Session, user_id: int, target_date: date
-    ) -> List[models.TimeRecord]:
-        return (
-            db.query(self.model)
-            .filter(
-                self.model.user_id == user_id,
-                self.model.date == target_date
-            )
-            .order_by(self.model.time)
-            .all()
+    def initialize_user_tracking(self, db: Session, user_id: int) -> None:
+        """Initialize time tracking for a new user"""
+        # Create current tracking record
+        current_tracking = models.CurrentTimeTracking(
+            user_id=user_id,
+            status='NOT_STARTED'
         )
+        db.add(current_tracking)
+        db.commit()
+        
+        # Create today's time record if it doesn't exist
+        today = date.today()
+        existing_record = db.query(models.TimeRecord).filter(
+            models.TimeRecord.user_id == user_id,
+            models.TimeRecord.date == today
+        ).first()
+        
+        if not existing_record:
+            time_record = models.TimeRecord(
+                user_id=user_id,
+                date=today,
+                time=time(0, 0),
+                record_type='TIME_IN'
+            )
+            db.add(time_record)
+            db.commit()
 
-    def get_last_record_type(
-        self, db: Session, user_id: int, target_date: date
-    ) -> Optional[models.RecordType]:
-        last_record = (
-            db.query(self.model)
-            .filter(
-                self.model.user_id == user_id,
-                self.model.date == target_date
-            )
-            .order_by(self.model.time.desc())
-            .first()
+    def get_daily_summary(
+        self,
+        db: Session,
+        user_id: int,
+        target_date: date
+    ) -> Dict[str, Any]:
+        """Get daily summary of time records for a user"""
+        records = self.get_user_time_records(
+            db=db,
+            user_id=user_id,
+            start_date=target_date,
+            end_date=target_date
         )
-        return last_record.record_type if last_record else None
+        
+        return {
+            "date": target_date.isoformat(),
+            "total_records": len(records),
+            "records": [{
+                "id": r.id,
+                "time": r.time.isoformat(),
+                "record_type": r.record_type,
+                "created_at": r.created_at.isoformat()
+            } for r in records]
+        }

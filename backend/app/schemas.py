@@ -12,6 +12,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     pass
 
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    department: Optional[Department] = None
+    is_active: Optional[bool] = None
+
 class User(UserBase):
     id: int
     created_at: datetime
@@ -27,6 +34,12 @@ class TimeRecordBase(BaseModel):
 
 class TimeRecordCreate(TimeRecordBase):
     pass
+
+class TimeRecordUpdate(BaseModel):
+    user_id: Optional[int] = None
+    date: Optional[date] = None
+    time: Optional[time] = None
+    record_type: Optional[RecordType] = None
 
 class TimeRecord(TimeRecordBase):
     id: int

@@ -1,13 +1,6 @@
+# app/services/__init__.py
+from .base_service import BaseService
 from .user_service import UserService
 from .time_record_service import TimeRecordService
 
-# Initialize services
-user_service = UserService()
-time_record_service = TimeRecordService()
-
-__all__ = [
-    'user_service',
-    'time_record_service',
-    'UserService',
-    'TimeRecordService'
-]
+__all__ = ['BaseService', 'UserService', 'TimeRecordService']

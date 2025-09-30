@@ -1,13 +1,18 @@
-from .models import User, TimeRecord, RecordType, Department
-from .database import Base, engine, get_db
-from . import schemas, models, services
+# app/__init__.py
+from fastapi import FastAPI
+from .database import engine, Base
+from . import models
 
-# Import services for easier access
-from .services import user_service, time_record_service
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
-__all__ = [
-    'User', 'TimeRecord', 'RecordType', 'Department',
-    'Base', 'engine', 'get_db',
-    'schemas', 'models', 'services',
-    'user_service', 'time_record_service'
-]
+app = FastAPI()
+
+# Import and include routers
+from .routes import users, time_records
+app.include_router(users.router, prefix="/users", tags=["users"])
+app.include_router(time_records.router, prefix="/time-records", tags=["time-records"])
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to Eckho WFM API"}
