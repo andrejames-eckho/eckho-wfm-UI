@@ -64,7 +64,7 @@ async def read_users(
                 limit=limit,
                 active_only=active_only
             )
-        return await user_service.get_multi(db, skip=skip, limit=limit)
+        return user_service.get_multi(db, skip=skip, limit=limit)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -236,7 +236,7 @@ async def get_user_time_records(
     Get time records for a specific user with optional date filtering.
     """
     try:
-        return await user_service.get_user_time_records(
+        return user_service.get_user_time_records(
             db,
             user_id=user_id,
             start_date=start_date,

@@ -39,9 +39,16 @@ async def create_time_record(
                 detail="User not found"
             )
             
-        return await time_record_service.create(db, obj_in=time_record)
-    except HTTPException as e:
-        raise e
+        # Use the new service method
+        return time_record_service.create_time_record(
+            db=db,
+            user_id=time_record.user_id,
+            record_type=time_record.record_type,
+            record_time=time_record.time,
+            record_date=time_record.date
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -68,14 +75,14 @@ async def read_time_records(
     """
     try:
         if user_id:
-            # Verify user exists
-            user = await user_service.get(db, id=user_id)
+            # Verify user exists using the synchronous get_user method
+            user = user_service.get_user(db, user_id)
             if not user:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="User not found"
                 )
-            return await time_record_service.get_user_time_records(
+            return time_record_service.get_user_time_records(
                 db,
                 user_id=user_id,
                 start_date=start_date,
@@ -86,7 +93,7 @@ async def read_time_records(
             )
         
         # Get all time records with filters
-        return await time_record_service.get_multi(
+        return time_record_service.get_multi(
             db,
             skip=skip,
             limit=limit,
@@ -116,7 +123,7 @@ async def read_time_record(
     Get a specific time record by ID.
     """
     try:
-        record = await time_record_service.get(db, id=time_record_id)
+        record = time_record_service.get(db, id=time_record_id)
         if not record:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -158,7 +165,7 @@ async def read_user_time_records(
                 detail="User not found"
             )
             
-        return await time_record_service.get_user_time_records(
+        return time_record_service.get_user_time_records(
             db=db,
             user_id=user_id,
             start_date=start_date,
@@ -198,7 +205,7 @@ async def get_daily_summary(
                 detail="User not found"
             )
             
-        return await time_record_service.get_daily_summary(
+        return time_record_service.get_daily_summary(
             db=db,
             user_id=user_id,
             target_date=target_date
@@ -226,14 +233,14 @@ async def delete_time_record(
     """
     try:
         # Verify record exists
-        record = await time_record_service.get(db, id=time_record_id)
+        record = time_record_service.get(db, id=time_record_id)
         if not record:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Time record not found"
             )
             
-        return await time_record_service.delete(db, id=time_record_id)
+        return time_record_service.delete(db, id=time_record_id)
     except HTTPException as e:
         raise e
     except Exception as e:

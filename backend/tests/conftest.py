@@ -1,43 +1,95 @@
 import os
 import pytest
-from sqlalchemy import create_engine
+import asyncio
+from sqlalchemy import create_engine, text
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.database import Base
+from app.database import Base, get_async_db
 from app.models import User, TimeRecord, RecordType, Department
 
-# Use the main database for testing
-TEST_DB_URL = "postgresql://eckho_user:eckho_password@localhost:5432/eckho_wfm"
+# Use SQLite in-memory database for testing
+TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
+
+# Create async engine for testing
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an instance of the default event loop for each test case."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
 
 @pytest.fixture(scope="session")
-def engine():
+async def engine():
     """Create a test database engine"""
-    engine = create_engine(TEST_DB_URL)
+    engine = create_async_engine(
+        TEST_DB_URL,
+        echo=True,
+        future=True,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     
-    # Create all tables if they don't exist
-    Base.metadata.create_all(bind=engine)
+    # Create all tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     
     yield engine
     
-    # No cleanup needed - we're using the main database
+    # Cleanup
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    
+    await engine.dispose()
 
 @pytest.fixture
-def db_session(engine):
+def override_get_db(engine):
+    """Override the get_db dependency for testing"""
+    async def _get_db():
+        async with async_sessionmaker(
+            bind=engine, class_=AsyncSession, expire_on_commit=False
+        )() as session:
+            try:
+                yield session
+            finally:
+                await session.close()
+    return _get_db
+
+@pytest.fixture
+def app(override_get_db):
+    """Create a test FastAPI application"""
+    from app.main import app
+    from app.database import get_async_db
+    
+    app.dependency_overrides[get_async_db] = override_get_db
+    return app
+
+@pytest.fixture
+async def async_client(app):
+    """Create a test client that can be used to make requests to the application."""
+    from fastapi.testclient import TestClient
+    
+    async with TestClient(app) as client:
+        yield client
+
+@pytest.fixture
+async def db_session(engine):
     """Create a new database session for a test"""
-    connection = engine.connect()
-    transaction = connection.begin()
-    Session = sessionmaker(bind=connection)
-    session = Session()
-    
-    yield session
-    
-    session.close()
-    transaction.rollback()
-    connection.close()
+    async with async_sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
 
 @pytest.fixture
-def test_user(db_session):
+async def test_user(db_session):
     """Create a test user"""
     user = User(
         username="test_user",
@@ -46,7 +98,8 @@ def test_user(db_session):
         department=Department.WAREHOUSE
     )
     db_session.add(user)
-    db_session.commit()
+    await db_session.commit()
+    await db_session.refresh(user)
     return user
 
 @pytest.fixture
