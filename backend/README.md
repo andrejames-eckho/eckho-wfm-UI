@@ -60,31 +60,217 @@ Authorization: Bearer <your_jwt_token>
 
 ### 👥 Users
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/users/` | Create a new user |
-| `GET` | `/users/` | List all users (with pagination) |
-| `GET` | `/users/{user_id}` | Get user details with time records |
-| `PUT` | `/users/{user_id}` | Update user information |
-| `DELETE` | `/users/{user_id}` | Delete a user |
-| `POST` | `/users/{user_id}/deactivate` | Deactivate a user |
-| `POST` | `/users/{user_id}/activate` | Activate a user |
+#### Create User
+**`POST /users/`**
+```json
+{
+  "username": "johndoe",
+  "first_name": "John",
+  "last_name": "Doe",
+  "department": "Field"
+}
+```
+**Response (201 Created)**
+```json
+{
+  "id": 1,
+  "username": "johndoe",
+  "first_name": "John",
+  "last_name": "Doe",
+  "department": "Field",
+  "created_at": "2025-10-28T12:00:00Z"
+}
+```
 
-#### Filtering Users
-- `GET /users/?department=Engineering` - Filter by department
-- `GET /users/?active_only=true` - Only show active users
-- `GET /users/?skip=10&limit=20` - Pagination
+#### List Users
+**`GET /users/`**
+**Query Parameters:**
+- `skip` (int, optional): Number of records to skip (default: 0)
+- `limit` (int, optional): Maximum number of records to return (default: 100, max: 1000)
+- `department` (str, optional): Filter by department
+- `active_only` (bool, optional): Only return active users (default: true)
+
+**Response (200 OK)**
+```json
+[
+  {
+    "id": 1,
+    "username": "johndoe",
+    "first_name": "John",
+    "last_name": "Doe",
+    "department": "Field",
+    "created_at": "2025-10-28T12:00:00Z"
+  }
+]
+```
+
+#### Get User Details
+**`GET /users/{user_id}`**
+**Response (200 OK)**
+```json
+{
+  "id": 1,
+  "username": "johndoe",
+  "first_name": "John",
+  "last_name": "Doe",
+  "department": "Field",
+  "created_at": "2025-10-28T12:00:00Z",
+  "time_records": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "date": "2025-10-28",
+      "time": "09:00:00",
+      "record_type": "Time In",
+      "created_at": "2025-10-28T09:00:00Z"
+    }
+  ]
+}
+```
+
+#### Update User
+**`PUT /users/{user_id}`**
+```json
+{
+  "first_name": "Johnathan",
+  "department": "Warehouse"
+}
+```
+**Response (200 OK)**
+```json
+{
+  "id": 1,
+  "username": "johndoe",
+  "first_name": "Johnathan",
+  "last_name": "Doe",
+  "department": "Warehouse",
+  "created_at": "2025-10-28T12:00:00Z"
+}
+```
+
+#### Delete User
+**`DELETE /users/{user_id}`**
+**Response (200 OK)**
+```json
+{
+  "id": 1,
+  "username": "johndoe",
+  "first_name": "Johnathan",
+  "last_name": "Doe",
+  "department": "Warehouse",
+  "created_at": "2025-10-28T12:00:00Z"
+}
+```
 
 ### ⏱️ Time Records
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/time-records/` | Create a new time record |
-| `GET` | `/time-records/` | List all time records (with filters) |
-| `GET` | `/time-records/{record_id}` | Get specific time record |
-| `GET` | `/time-records/user/{user_id}` | Get user's time records |
-| `GET` | `/time-records/user/{user_id}/daily-summary/{date}` | Get daily summary |
-| `DELETE` | `/time-records/{record_id}` | Delete a time record |
+#### Create Time Record
+**`POST /time-records/`**
+```json
+{
+  "user_id": 1,
+  "date": "2025-10-28",
+  "time": "09:00:00",
+  "record_type": "Time In"
+}
+```
+**Response (201 Created)**
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "date": "2025-10-28",
+  "time": "09:00:00",
+  "record_type": "Time In",
+  "created_at": "2025-10-28T09:00:00Z"
+}
+```
+
+#### List Time Records
+**`GET /time-records/`**
+**Query Parameters:**
+- `user_id` (int, optional): Filter by user ID
+- `start_date` (date, optional): Filter by start date (YYYY-MM-DD)
+- `end_date` (date, optional): Filter by end date (YYYY-MM-DD)
+- `record_type` (string, optional): Filter by record type (TIME_IN, TIME_OUT, BREAK_IN, BREAK_OUT)
+- `skip` (int, optional): Number of records to skip (default: 0)
+- `limit` (int, optional): Maximum number of records to return (default: 100, max: 1000)
+
+**Response (200 OK)**
+```json
+[
+  {
+    "id": 1,
+    "user_id": 1,
+    "date": "2025-10-28",
+    "time": "09:00:00",
+    "record_type": "Time In",
+    "created_at": "2025-10-28T09:00:00Z"
+  }
+]
+```
+
+#### Get Time Record
+**`GET /time-records/{record_id}`**
+**Response (200 OK)**
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "date": "2025-10-28",
+  "time": "09:00:00",
+  "record_type": "Time In",
+  "created_at": "2025-10-28T09:00:00Z"
+}
+```
+
+#### Get User's Time Records
+**`GET /time-records/user/{user_id}`**
+**Query Parameters:** Same as list time records
+**Response (200 OK)**
+```json
+[
+  {
+    "id": 1,
+    "user_id": 1,
+    "date": "2025-10-28",
+    "time": "09:00:00",
+    "record_type": "Time In",
+    "created_at": "2025-10-28T09:00:00Z"
+  }
+]
+```
+
+#### Get Daily Summary
+**`GET /time-records/user/{user_id}/daily-summary/{date}`**
+**Response (200 OK)**
+```json
+{
+  "date": "2025-10-28",
+  "user_id": 1,
+  "time_in": "09:00:00",
+  "time_out": "17:00:00",
+  "breaks": [
+    {"start": "12:00:00", "end": "12:30:00", "duration_minutes": 30}
+  ],
+  "total_break_time_minutes": 30,
+  "total_work_time_minutes": 450
+}
+```
+
+#### Delete Time Record
+**`DELETE /time-records/{record_id}`**
+**Response (200 OK)**
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "date": "2025-10-28",
+  "time": "09:00:00",
+  "record_type": "Time In",
+  "created_at": "2025-10-28T09:00:00Z"
+}
+```
 
 #### Filtering Time Records
 - `GET /time-records/?user_id=1` - Filter by user
@@ -94,10 +280,19 @@ Authorization: Bearer <your_jwt_token>
 
 ## 🔄 Record Types
 
-- `TIME_IN` - Employee starts their workday
-- `TIME_OUT` - Employee ends their workday
-- `BREAK_IN` - Employee starts a break
-- `BREAK_OUT` - Employee ends a break
+| Type | Description |
+|------|-------------|
+| `TIME_IN` | Employee starts their workday |
+| `TIME_OUT` | Employee ends their workday |
+| `BREAK_IN` | Employee starts a break |
+| `BREAK_OUT` | Employee ends a break |
+
+## 🏗️ Department Types
+
+| Type | Description |
+|------|-------------|
+| `Field` | Field operations employees |
+| `Warehouse` | Warehouse employees |
 
 ## 📦 Services
 
